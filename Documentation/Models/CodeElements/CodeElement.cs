@@ -10,20 +10,19 @@ namespace Documentation.Models.CodeElements
         public BaseCodeDeclarationKind Declaration { get; set; }
         public string? AccessModifier { get; set; }
         public CodeDocumentation? Documentation { get; set; }
-        public IParentType? Parent { get; set; }
+        public CodeNamespace? Namespace { get; set; }
+        public IParentType? Parent { get; set; } 
 
-        public CodeElement(IParentType parent, CodeElementType type, BaseCodeDeclarationKind declaration, string? accessModifier, CodeDocumentation? documentation = null)
+        public CodeElement(CodeElementType type, BaseCodeDeclarationKind declaration, CodeNamespace? namespaceReference = null, IParentType? parent = null, string? accessModifier = null, CodeDocumentation? documentation = null)
         {
             Type = type;
             Declaration = declaration;
+            Namespace = namespaceReference;
+            Parent = parent;
             AccessModifier = accessModifier;
             Documentation = documentation;
-            Parent = parent;
         }
 
-        public int CompareTo(CodeElement other)
-        {
-            return Type.CompareTo(other.Type);
-        }
+        public int CompareTo(CodeElement other) => Type.CompareTo(other.Type);
     }
 }

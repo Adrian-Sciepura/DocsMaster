@@ -6,8 +6,8 @@ namespace Documentation.Models.CodeElements.Methods
 {
     internal abstract class BaseCodeMethod : CodeElement
     {
-        protected BaseCodeMethod(IParentType parent, CodeElementType type, BaseCodeDeclarationKind declaration, string? accessModifier, CodeDocumentation? documentation = null) :
-            base(parent, type, declaration, accessModifier, documentation)
+        protected BaseCodeMethod(CodeElementType type, BaseCodeDeclarationKind declaration, CodeNamespace namespaceReference, IParentType parent, string? accessModifier, CodeDocumentation? documentation = null) :
+            base(type, declaration, namespaceReference, parent, accessModifier, documentation)
         {
         }
     }

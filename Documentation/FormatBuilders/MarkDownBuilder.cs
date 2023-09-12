@@ -61,7 +61,7 @@ namespace Documentation.FormatBuilders
         {
             StringBuilder sb = new StringBuilder();
             Action<CodeNamespace> runForEveryNamespace = namespacereference => sb.Append(NamespaceAllInOne(FileLayout.AllInOne, namespacereference));
-            Func<CodeNamespace, string> pathBuilder = namespaceReference => namespaceReference.Hash;
+            Func<CodeNamespace, string> pathBuilder = namespaceReference => namespaceReference.Declaration.GetHash();
 
             string menu = "<link rel=\"stylesheet\" href=\"style.css\">\n<pre>\n";
             GetNamespacesTreeRecursive(_solutionTree.root, ref menu, "", "", true, runForEveryNamespace, pathBuilder);
@@ -77,7 +77,7 @@ namespace Documentation.FormatBuilders
         public override void GenerateSplitByNamespace()
         {
             Action<CodeNamespace> runForEveryNamespace = namespacereference => NamespaceSplitByNamespace(FileLayout.SplitByNamespace, namespacereference, _outputFolder);
-            Func<CodeNamespace, string> pathBuilder = namespaceReference => $"{namespaceReference.Name}.md#{namespaceReference.Hash}";
+            Func<CodeNamespace, string> pathBuilder = namespaceReference => $"{namespaceReference.Declaration.GetName()}.md#{namespaceReference.Declaration.GetHash()}";
 
             string menu = "<pre>\n";
             GetNamespacesTreeRecursive(_solutionTree.root, ref menu, "", "", true, runForEveryNamespace, pathBuilder);
@@ -92,11 +92,10 @@ namespace Documentation.FormatBuilders
         public override void GenerateSplitByType()
         {
             Action<CodeNamespace> runForEveryNamespace = namespacereference => NamespaceSplitByType(FileLayout.SplitByType, namespacereference, _outputFolder);
-            Func<CodeNamespace, string> pathBuilder = namespaceReference => $"{namespaceReference.Name}.md#{namespaceReference.Hash}";
+            Func<CodeNamespace, string> pathBuilder = namespaceReference => $"{namespaceReference.Declaration.GetName()}.md#{namespaceReference.Declaration.GetHash()}";
 
             string menu = "";
             GetNamespacesTreeRecursive(_solutionTree.root, ref menu, "", "", true, runForEveryNamespace, pathBuilder);
-            //menu += "</pre>";
 
             using (StreamWriter menuFile = new StreamWriter(Path.Combine(_outputFolder, "README.md")))
                 menuFile.Write(menu);
@@ -146,12 +145,12 @@ namespace Documentation.FormatBuilders
             { (CodeElementType.Destructor, FileLayout.SplitByType), DestructorDefault },
             { (CodeElementType.Method, FileLayout.SplitByType), MethodDefault },
             { (CodeElementType.Operator, FileLayout.SplitByType), OperatorDefault },
-            { (CodeElementType.Delegate, FileLayout.SplitByType), DelegateDefault },
+            { (CodeElementType.Delegate, FileLayout.SplitByType), DelegateSplitByType },
             { (CodeElementType.Interface, FileLayout.SplitByType), TypeSplitByType },
             { (CodeElementType.Class, FileLayout.SplitByType), TypeSplitByType },
             { (CodeElementType.Struct, FileLayout.SplitByType), TypeSplitByType },
             { (CodeElementType.Record, FileLayout.SplitByType), TypeSplitByType },
-            { (CodeElementType.Enum, FileLayout.SplitByType), EnumDefault },
+            { (CodeElementType.Enum, FileLayout.SplitByType), EnumSplitByType },
 
 
             //Split Everything
@@ -384,9 +383,9 @@ namespace Documentation.FormatBuilders
 
         #region Const Values
 
+        private const string CSS_STYLE_DECLARATION = "<link rel=\"stylesheet\" href=\"style.css\">";
+
         private const string TYPE_NO_CONTENT = "This type has no content";
-        private const string CODE_BLOCK_OPEN = "<code>";
-        private const string CODE_BLOCK_CLOSE = "</code>";
 
         private const string NAMESPACE_DECLARATION_SELECTOR = "NamespaceDeclaration";
 
@@ -399,7 +398,6 @@ namespace Documentation.FormatBuilders
         private const string ENUM_DECLARATION_SELECTOR = "EnumDeclaration";
         
         private const string METHOD_DECLARATION_SELECTOR = "MethodDeclaration";
-        private const string VARIABLE_DECLARATION_SELECTOR = "VariableDeclaration";
         
         private const string METHOD_PARAMETER_NAME_SELECTOR = "MethodParameterName";
         private const string VARIABLE_NAME_SELECTOR = "VariableName";
@@ -417,23 +415,26 @@ namespace Documentation.FormatBuilders
 
         #region Help functions
 
+        private static readonly CodeElementType[] NamespaceTarget = new[] { CodeElementType.Namespace };
+        private static readonly CodeElementType[] TypeTarget = new[] { CodeElementType.Namespace, CodeElementType.Interface, CodeElementType.Class, CodeElementType.Struct, CodeElementType.Record, CodeElementType.Enum };
+
+
         private static string BuildPath(CodeElement codeElement, CodeElementType[]? targetType)
         {
             Stack<string> elements = new Stack<string>();
-
 
             IParentType? parentType = codeElement.Parent;
 
             if (targetType == null || targetType.Contains(codeElement.Type))
                 elements.Push(codeElement.Declaration.GetName());
             else
-                while (parentType != null && !targetType.Contains(parentType.GetElementType()))
+                while (parentType != null && !targetType.Contains(parentType.GetElement().Type))
                     parentType = parentType.GetParent();
 
             
             while (parentType != null)
             {
-                elements.Push(parentType.GetName());
+                elements.Push(parentType.GetElement().Declaration.GetName());
                 parentType = parentType.GetParent();
             }
 
@@ -443,8 +444,6 @@ namespace Documentation.FormatBuilders
                 return string.Empty;
         }
 
-        private static readonly CodeElementType[] NamespaceTarget = new[] { CodeElementType.Namespace };
-        private static readonly CodeElementType[] TypeTarget = new[] { CodeElementType.Interface, CodeElementType.Class, CodeElementType.Struct, CodeElementType.Record, CodeElementType.Enum };
         private static string ReferencePathDefault(FileLayout fileLayout, CodeElement codeElement, bool includePath, bool includeHash)
         {
             StringBuilder sb = new StringBuilder();
@@ -736,7 +735,7 @@ namespace Documentation.FormatBuilders
         private static StringBuilder NamespaceAllInOne(FileLayout fileLayout, CodeNamespace codeNamespace)
         {
             StringBuilder sb = new StringBuilder();
-            sb.Append($"***\n\n<h1><strong><span class=\"{NAMESPACE_DECLARATION_SELECTOR}\"><a name=\"{codeNamespace.Hash}\" id=\"{codeNamespace.Hash}\">{codeNamespace.Name}</a></span></strong></h1>\n\n");
+            sb.Append($"***\n\n<h1><strong><span class=\"{NAMESPACE_DECLARATION_SELECTOR}\"><a name=\"{codeNamespace.Declaration.GetName()}\" id=\"{codeNamespace.Declaration.GetHash()}\">{codeNamespace.Declaration.GetName()}</a></span></strong></h1>\n\n");
 
 
             CodeElementType currentCodeElementType = CodeElementType.None;
@@ -799,8 +798,8 @@ namespace Documentation.FormatBuilders
         {
             StringBuilder sb = new StringBuilder();
             sb.Append("<link rel=\"stylesheet\" href=\"style.css\">\n\n");
-            sb.Append($"### [Go Back](README.md)\n");
-            sb.Append($"***\n\n<h1><strong><a name=\"{codeNamespace.Hash}\" id=\"{codeNamespace.Hash}\">{codeNamespace.Name}</a></strong></h1>\n\n");
+            sb.Append($"### [&#x21E6; Back](README.md)\n");
+            sb.Append($"***\n\n<h1><strong><a name=\"{codeNamespace.Declaration.GetName()}\" id=\"{codeNamespace.Declaration.GetHash()}\">{codeNamespace.Declaration.GetName()}</a></strong></h1>\n\n");
 
 
             CodeElementType currentCodeElementType = CodeElementType.None;
@@ -818,7 +817,7 @@ namespace Documentation.FormatBuilders
 
             if (codeNamespace.InternalTypes.Count == 0) sb.Append(TYPE_NO_CONTENT);
 
-            using (StreamWriter splitIntoNamespaces = new StreamWriter(Path.Combine(baseOutputPath, $"{codeNamespace.Name}.md")))
+            using (StreamWriter splitIntoNamespaces = new StreamWriter(Path.Combine(baseOutputPath, $"{codeNamespace.Declaration.GetName()}.md")))
             {
                 splitIntoNamespaces.Write(sb.ToString());
             }
@@ -864,15 +863,29 @@ namespace Documentation.FormatBuilders
         #region Split By Type Converters
 
         #region Help Functions
-        
+
+        private static StringBuilder TypeTemplateSplitByType(StringBuilder content, CodeElement codeElement)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            sb.Append(CSS_STYLE_DECLARATION).Append("\n\n");
+            sb.Append($"### [&#x21E6; Go Back]({ReferencePathDefault(FileLayout.SplitByType, codeElement.Parent.GetElement(), true, true)})\n");
+            sb.Append(content);
+
+            using (StreamWriter typeFile = new StreamWriter(Path.Combine(_outputFolder, ReferencePathDefault(FileLayout.SplitByType, codeElement, true, false))))
+                typeFile.Write(sb.ToString());
+
+            return sb;
+        }
+
         #endregion
 
         private static void NamespaceSplitByType(FileLayout fileLayout, CodeNamespace codeNamespace, string baseOutputPath)
         {
             StringBuilder sb = new StringBuilder();
             sb.Append("<link rel=\"stylesheet\" href=\"style.css\">\n\n");
-            sb.Append($"### [Go Back](README.md)\n");
-            sb.Append($"***\n\n<h1><strong><a name=\"{codeNamespace.Hash}\" id=\"{codeNamespace.Hash}\">{codeNamespace.Name}</a></strong></h1>\n\n");
+            sb.Append($"### [&#x21E6; Go Back](README.md)\n");
+            sb.Append($"***\n\n<h1><strong><a name=\"{codeNamespace.Declaration.GetHash()}\" id=\"{codeNamespace.Declaration.GetHash()}\">{codeNamespace.Declaration.GetName()}</a></strong></h1>\n\n");
 
 
             CodeElementType currentCodeElementType = CodeElementType.None;
@@ -886,31 +899,19 @@ namespace Documentation.FormatBuilders
                     currentCodeElementType = internalType.Type;
                 }
 
-
-                //var declaration = DeclarationDefault(fileLayout, internalType.Declaration, TYPE_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR);
-
+                
+                
                 var declaration = ConvertCodeElementToMarkdown[(internalType.Type, fileLayout)](fileLayout, internalType, "");
 
                 var docsDescription = internalType.Documentation?.Summary != null ? 
                     ConvertDocumentationElementToMarkdown.GetValue(CodeDocumentationElementType.Summary)?.Invoke(fileLayout, internalType.Documentation.Summary, string.Empty).ToString() : string.Empty;
 
                 sb.Append($"| {declaration} | {docsDescription} |\n");
-
-
-
-                /*using (StreamWriter typeFile = new StreamWriter(Path.Combine(baseOutputPath, ReferencePathDefault(fileLayout, internalType, true, false))))
-                {
-                    StringBuilder typeString = new StringBuilder();
-                    typeString.Append("<link rel=\"stylesheet\" href=\"style.css\">\n\n");
-                    typeString.Append($"### [Go Back]({codeNamespace.Name}.md#{codeNamespace.Hash})\n");
-                    typeString.Append(ConvertCodeElementToMarkdown[(internalType.Type, fileLayout)](fileLayout, internalType, ""));
-                    typeFile.Write(typeString.ToString());
-                }*/
             }
 
             if (codeNamespace.InternalTypes.Count == 0) sb.Append(TYPE_NO_CONTENT);
 
-            using (StreamWriter namespaceFile = new StreamWriter(Path.Combine(baseOutputPath, $"{codeNamespace.Name}.md")))
+            using (StreamWriter namespaceFile = new StreamWriter(Path.Combine(baseOutputPath, $"{codeNamespace.Declaration.GetName()}.md")))
                 namespaceFile.Write(sb.ToString());
         }
 
@@ -919,9 +920,7 @@ namespace Documentation.FormatBuilders
             CodeType codeType = codeElement as CodeType;
             StringBuilder declaration = DeclarationDefault(fileLayout, codeElement.Declaration, TYPE_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR);
             StringBuilder sb = new StringBuilder();
-            sb.Append("<link rel=\"stylesheet\" href=\"style.css\">\n\n");
-            //sb.Append($"### [Go Back]({ReferencePathDefault(fileLayout, codeType.GetParent(), true, true)})\n");
-            // TODO Add Back Button
+
             sb.Append(TypeHeaderDefault(codeType.Declaration, declaration.ToString(), indent));
 
             string newIndent = indent + '\t';
@@ -942,18 +941,53 @@ namespace Documentation.FormatBuilders
                     currentElementType = member.Type;
                 }
 
-                sb.Append(newIndent);
                 sb.AppendWithSpace($"- <span class=\"{LIST_ELEMENT_DECLARATION_SELECTOR}\">");
-                sb.Append(ConvertCodeElementToMarkdown[(member.Type, FileLayout.SplitByNamespace)](fileLayout, member, newIndent));
-                sb.Append($"{newIndent}  </span>\n");
+                sb.Append(ConvertCodeElementToMarkdown[(member.Type, fileLayout)](fileLayout, member, ""));
+                sb.Append($"</span>\n\n");
             }
 
             if (codeType.Members.Count == 0) sb.Append($"{newIndent}- {TYPE_NO_CONTENT}\n");
 
+            TypeTemplateSplitByType(sb, codeType);
+            return declaration;
+        }
 
-            using (StreamWriter typeFile =  new StreamWriter(Path.Combine(_outputFolder, ReferencePathDefault(fileLayout, codeType, true, false))))
-                typeFile.Write(sb.ToString());
+        private static StringBuilder DelegateSplitByType(FileLayout fileLayout, CodeElement codeElement, string indent)
+        {
+            CodeDelegate codeDelegate = codeElement as CodeDelegate;
+            
+            StringBuilder headerBuilder = new StringBuilder();
+            AddElementWithSelector(codeDelegate.AccessModifier, KEYWORD_SELECTOR, headerBuilder);
+            headerBuilder.AppendWithSpace($" <span class=\"{KEYWORD_SELECTOR}\">>delegate</span>");
+            headerBuilder.AppendWithSpace(codeDelegate.ReturnType);
+            headerBuilder.Append(DeclarationDefault(fileLayout, codeDelegate.Declaration, TYPE_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR));
+            headerBuilder.Append(MethodParametersDefault(fileLayout, codeDelegate.Parameters));
 
+            StringBuilder sb = TypeHeaderDefault(codeElement.Declaration, headerBuilder.ToString(), indent);
+
+            if (codeElement.Documentation != null)
+                sb.Append(Documentation(fileLayout, codeElement.Documentation, indent + "  "));
+
+            TypeTemplateSplitByType(sb, codeDelegate);
+            return headerBuilder;
+        }
+
+        private static StringBuilder EnumSplitByType(FileLayout fileLayout, CodeElement codeElement, string indent)
+        {
+            CodeEnum codeEnum = codeElement as CodeEnum;
+            StringBuilder declaration = DeclarationDefault(fileLayout, codeElement.Declaration, TYPE_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR);
+            StringBuilder sb = TypeHeaderDefault(codeEnum.Declaration, declaration.ToString(), indent);
+
+            sb.Append($"Elements:\n");
+
+            if (codeEnum.Elements.Count > 0)
+                codeEnum.Elements.ForEach(x => sb.Append($"- {x}\n"));
+            else
+                sb.Append($"- {TYPE_NO_CONTENT}\n");
+
+            sb.Append(Documentation(fileLayout, codeElement.Documentation, indent + "  "));
+
+            TypeTemplateSplitByType(sb, codeEnum);
             return declaration;
         }
 

@@ -1,10 +1,6 @@
 ﻿using Documentation.Models.CodeElements.Documentation;
 using Documentation.Models.CodeElements.TypeKind;
-using Microsoft.VisualStudio.Package;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Xml.Linq;
 
 namespace Documentation.Models.CodeElements.Types
 {
@@ -12,8 +8,8 @@ namespace Documentation.Models.CodeElements.Types
     {
         public List<string> Elements { get; set; }
 
-        public CodeEnum(IParentType parent, CodeRegularDeclaration declaration, string? accessModifier, CodeDocumentation? documentation = null, List<string>? elements = null) :
-            base(parent, CodeElementType.Enum, declaration, accessModifier, documentation)
+        public CodeEnum(CodeRegularDeclaration declaration, CodeNamespace namespaceReference, List<string>? elements = null, IParentType? parent = null, string? accessModifier = null, CodeDocumentation? documentation = null) :
+            base(CodeElementType.Enum, declaration, namespaceReference, parent, accessModifier, documentation)
         {
             Elements = elements ?? new List<string>();
         }

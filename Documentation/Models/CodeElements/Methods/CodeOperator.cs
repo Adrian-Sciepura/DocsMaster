@@ -16,8 +16,8 @@ namespace Documentation.Models.CodeElements.Methods
         public List<CodeVariable> Parameters { get; set; }
         public BaseCodeDeclarationKind ReturnType { get; set; }
 
-        public CodeOperator(IParentType parent, CodeRegularDeclaration declaration, string accessModifier, BaseCodeDeclarationKind returnType, List<CodeVariable>? parameters = null, CodeDocumentation documentation = null) :
-            base(parent, CodeElementType.Operator, declaration, accessModifier, documentation)
+        public CodeOperator(CodeRegularDeclaration declaration, CodeNamespace namespaceReference, IParentType parent, string accessModifier, BaseCodeDeclarationKind returnType, List<CodeVariable>? parameters = null, CodeDocumentation documentation = null) :
+            base(CodeElementType.Operator, declaration, namespaceReference, parent, accessModifier, documentation)
         {
             ReturnType = returnType;
             Parameters = parameters ?? new List<CodeVariable>();

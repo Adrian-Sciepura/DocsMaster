@@ -1,14 +1,9 @@
-﻿using Documentation.Models.CodeElements.Types;
-
-namespace Documentation.Models.CodeElements
+﻿namespace Documentation.Models.CodeElements
 {
     internal interface IParentType
     {
-        void AddInternalType(BaseCodeType internalType);
-
-        string GetName();
-        CodeElementType GetElementType();
-
+        void AddInternalElement(CodeElement element);
+        CodeElement GetElement();
         IParentType? GetParent();
     }
 }

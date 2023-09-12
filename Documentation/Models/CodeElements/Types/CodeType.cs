@@ -10,30 +10,25 @@ namespace Documentation.Models.CodeElements.Types
     {
         public List<CodeElement> Members { get; set; }
 
-        public CodeType(IParentType parent, CodeElementType type, BaseCodeDeclarationKind declaration, string? accessModifier, CodeDocumentation? documentation = null, List<CodeElement>? members = null) :
-            base(parent, type, declaration, accessModifier, documentation)
+        public CodeType(CodeElementType type, BaseCodeDeclarationKind declaration, CodeNamespace namespaceReference, IParentType? parent = null, string? accessModifier = null, CodeDocumentation? documentation = null, List<CodeElement>? members = null) :
+            base(type, declaration, namespaceReference, parent, accessModifier, documentation)
         {
             Members = members ?? new List<CodeElement>();
         }
 
-        public void AddInternalType(BaseCodeType internalType)
+        public void AddInternalElement(CodeElement element)
         {
-            Members.Add(internalType);
+            Members.Add(element);
         }
 
-        public string GetName()
+        public CodeElement GetElement()
         {
-            return Declaration.GetName();
+            return this;
         }
 
-        public IParentType? GetParent()
+        public IParentType GetParent()
         {
             return Parent;
-        }
-
-        public CodeElementType GetElementType()
-        {
-            return Type;
         }
 
         /*public override XElement ConvertToXml()

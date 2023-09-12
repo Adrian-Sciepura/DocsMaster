@@ -5,8 +5,8 @@ namespace Documentation.Models.CodeElements.Types
 {
     internal abstract class BaseCodeType : CodeElement
     {
-        public BaseCodeType(IParentType parent, CodeElementType type, BaseCodeDeclarationKind declaration, string accessModifier, CodeDocumentation documentation = null) :
-            base(parent, type, declaration, accessModifier, documentation)
+        public BaseCodeType(CodeElementType type, BaseCodeDeclarationKind declaration, CodeNamespace namespaceReference, IParentType? parent = null, string? accessModifier = null, CodeDocumentation? documentation = null) :
+            base(type, declaration, namespaceReference, parent, accessModifier, documentation)
         {
         }
     }

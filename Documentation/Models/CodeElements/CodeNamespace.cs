@@ -1,52 +1,33 @@
-﻿using Documentation.FormatBuilders;
+﻿using Documentation.Models.CodeElements.TypeKind;
 using Documentation.Models.CodeElements.Types;
 using System.Collections.Generic;
-using System.Text;
-using System.Xml.Linq;
 
 namespace Documentation.Models.CodeElements
 {
-    internal sealed class CodeNamespace : IParentType
+    internal sealed class CodeNamespace : CodeElement, IParentType
     {
-        public string Name { get; set; }
-        public string Hash { get; init; }
         public List<BaseCodeType> InternalTypes { get; set; }
 
-        public CodeNamespace(string name, List<BaseCodeType>? internalTypes = null)
+        public CodeNamespace(string name, List<BaseCodeType>? internalTypes = null) :
+            base(CodeElementType.Namespace, new CodeRegularDeclaration(name, name))
         {
-            Name = name;
             InternalTypes = internalTypes ?? new List<BaseCodeType>();
-            Hash = $"{Name.GetHashCode():X8}";
         }
 
-        public void AddInternalType(BaseCodeType internalType)
+        public void AddInternalElement(CodeElement element)
         {
-            InternalTypes.Add(internalType);
+            if (element is BaseCodeType internalType)
+                InternalTypes.Add(internalType);
         }
 
-        public string GetName()
+        public CodeElement GetElement()
         {
-            return Name;
+            return this;
         }
 
-        public IParentType? GetParent()
+        public IParentType GetParent()
         {
             return null;
         }
-
-        public CodeElementType GetElementType()
-        {
-            return CodeElementType.Namespace;
-        }
-
-        /*public XElement ConvertToXml()
-{
-   *//*XElement xmlNamespace = new XElement("namespace");
-
-   if (InternalTypes.Count > 0)
-       xmlNamespace.Add(InternalTypes.Select(x => x.ConvertToXml()));
-
-   return xmlNamespace;*//*
-}*/
     }
 }

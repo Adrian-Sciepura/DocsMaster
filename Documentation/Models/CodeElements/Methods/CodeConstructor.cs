@@ -15,8 +15,8 @@ namespace Documentation.Models.CodeElements.Methods
     {
         public List<CodeVariable> Parameters { get; set; }
 
-        public CodeConstructor(IParentType parent, CodeRegularDeclaration declaration, string accessModifier, List<CodeVariable>? parameters = null, CodeDocumentation documentation = null) :
-            base(parent, CodeElementType.Constructor, declaration, accessModifier, documentation)
+        public CodeConstructor(CodeRegularDeclaration declaration, CodeNamespace namespaceReference, IParentType parent, string accessModifier, List<CodeVariable>? parameters = null, CodeDocumentation documentation = null) :
+            base(CodeElementType.Constructor, declaration, namespaceReference, parent, accessModifier, documentation)
         {
             Parameters = parameters ?? new List<CodeVariable>();
         }
