@@ -2,7 +2,6 @@
 using Documentation.Services;
 using EnvDTE;
 using System.IO;
-using System.Reflection;
 
 namespace Documentation
 {
@@ -19,7 +18,7 @@ namespace Documentation
                 "docs"));
 
             DocumentationBuilder docsBuilder = new DocumentationBuilder(docsInfo);
-            
+
 
 #if DEBUG
             await docsBuilder.BuildAsyncDebug();

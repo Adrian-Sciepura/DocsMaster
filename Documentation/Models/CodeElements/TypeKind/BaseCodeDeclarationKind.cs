@@ -1,13 +1,8 @@
-﻿using Documentation.FormatBuilders;
-using Microsoft.VisualStudio.Debugger.Interop;
-using System.Text;
-using System.Xml.Linq;
-
-namespace Documentation.Models.CodeElements.TypeKind
+﻿namespace Documentation.Models.CodeElements.TypeKind
 {
     internal abstract class BaseCodeDeclarationKind
     {
-        protected BaseCodeDeclarationKind() 
+        protected BaseCodeDeclarationKind()
         {
         }
 

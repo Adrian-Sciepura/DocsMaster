@@ -1,6 +1,5 @@
 ﻿using Documentation.Models.CodeElements.Documentation;
 using Documentation.Models.CodeElements.TypeKind;
-using Documentation.Models.CodeElements.Types;
 
 namespace Documentation.Models.CodeElements
 {
@@ -11,7 +10,7 @@ namespace Documentation.Models.CodeElements
         public string? AccessModifier { get; set; }
         public CodeDocumentation? Documentation { get; set; }
         public CodeNamespace? Namespace { get; set; }
-        public IParentType? Parent { get; set; } 
+        public IParentType? Parent { get; set; }
 
         public CodeElement(CodeElementType type, BaseCodeDeclarationKind declaration, CodeNamespace? namespaceReference = null, IParentType? parent = null, string? accessModifier = null, CodeDocumentation? documentation = null)
         {

@@ -1,6 +1,5 @@
 ﻿using Documentation.Models.CodeElements.Documentation;
 using Documentation.Models.CodeElements.TypeKind;
-using Documentation.Models.CodeElements.Types;
 using Documentation.Models.CodeElements.Variables;
 using System.Collections.Generic;
 

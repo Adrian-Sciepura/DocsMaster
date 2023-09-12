@@ -67,7 +67,7 @@
     <Compile Include="Models\CodeElements\Methods\CodeDestructor.cs" />
     <Compile Include="Models\CodeElements\Methods\CodeMethod.cs" />
     <Compile Include="Models\CodeElements\Methods\CodeOperator.cs" />
-    <Compile Include="Models\ProjectTreeReferences.cs" />
+    <Compile Include="Models\ReferenceBuilder.cs" />
     <Compile Include="TODOList.cs" />
     <Compile Include="FormatBuilders\FormatBuilder.cs" />
     <Compile Include="FormatBuilders\MarkDownBuilder.cs" />

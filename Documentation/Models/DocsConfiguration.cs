@@ -21,7 +21,7 @@ namespace Documentation.Models
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public enum SupportedExtensions
         {
-            html,
+            xml,
             md
         }
 

@@ -11,7 +11,7 @@ namespace Documentation.Models.CodeElements.Documentation
     internal class CodeDocumentationBuilder
     {
         private delegate void ActionForTag(ActionParams parameters);
-        private record ActionParams(ProjectTreeReferences references, SemanticModel semanticModel, CodeDocumentation documentation, XmlNodeSyntax element, SyntaxList<XmlAttributeSyntax> attributes, CodeDocumentationElement? parent);
+        private record ActionParams(ReferenceBuilder references, SemanticModel semanticModel, CodeDocumentation documentation, XmlNodeSyntax element, SyntaxList<XmlAttributeSyntax> attributes, CodeDocumentationElement? parent);
 
         private static readonly Regex cleanupXmlElementSyntax = new Regex(@"((\s?$[\r\n]*)|(\s*///))", RegexOptions.Compiled);
 
@@ -54,11 +54,11 @@ namespace Documentation.Models.CodeElements.Documentation
 
             foreach (var elementAttribute in parameters.attributes)
             {
-                switch(elementAttribute)
+                switch (elementAttribute)
                 {
                     case XmlCrefAttributeSyntax crefAttribute:
                         var crefSymbol = parameters.semanticModel.GetSymbolInfo(crefAttribute.Cref).Symbol?.ToString();
-                        
+
                         if (crefSymbol == null)
                             continue;
 
@@ -74,9 +74,9 @@ namespace Documentation.Models.CodeElements.Documentation
             }
 
 
-            foreach(var child in parameters.element.ChildNodes())
+            foreach (var child in parameters.element.ChildNodes())
             {
-                switch(child.Kind())
+                switch (child.Kind())
                 {
                     case SyntaxKind.XmlText:
                         var text = child.ToString();
@@ -85,8 +85,8 @@ namespace Documentation.Models.CodeElements.Documentation
 
                     case SyntaxKind.XmlElement:
                         XmlElementSyntax xmlElementSyntax = (XmlElementSyntax)child;
-                        
-                        if(RunAction.TryGetValue(xmlElementSyntax.StartTag.Name.ToString(), out InvokeAction))
+
+                        if (RunAction.TryGetValue(xmlElementSyntax.StartTag.Name.ToString(), out InvokeAction))
                         {
                             sb.Append($"{{{noOfElements}}}");
 
@@ -120,11 +120,11 @@ namespace Documentation.Models.CodeElements.Documentation
         }
 
 
-        public static CodeDocumentation BuildDocumentation(IEnumerable<XmlElementSyntax> xmlElements, SemanticModel semanticModel, ProjectTreeReferences references)
+        public static CodeDocumentation BuildDocumentation(IEnumerable<XmlElementSyntax> xmlElements, SemanticModel semanticModel, ReferenceBuilder references)
         {
             ActionForTag actionForTag;
             CodeDocumentation codeDocumentation = new CodeDocumentation();
-            
+
             foreach (var xmlElement in xmlElements)
                 if (RunAction.TryGetValue(xmlElement.StartTag.Name.ToString(), out actionForTag))
                     actionForTag(new ActionParams(references, semanticModel, codeDocumentation, xmlElement, xmlElement.StartTag.Attributes, null));

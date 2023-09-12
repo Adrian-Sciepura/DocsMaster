@@ -1,8 +1,6 @@
 ﻿using Documentation.Models.CodeElements.Documentation;
 using Documentation.Models.CodeElements.TypeKind;
 using System.Collections.Generic;
-using System.Text;
-using System.Xml.Linq;
 
 namespace Documentation.Models.CodeElements.Types
 {

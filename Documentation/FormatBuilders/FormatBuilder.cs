@@ -17,9 +17,5 @@ namespace Documentation.FormatBuilders
         public abstract void GenerateAllInOne();
         public abstract void GenerateSplitByNamespace();
         public abstract void GenerateSplitByType();
-        
-        //public abstract void GenerateSplitByNamespaces();
-        //public abstract void GenerateSplitEverything();
-
     }
 }

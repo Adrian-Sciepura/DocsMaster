@@ -1,9 +1,4 @@
-﻿using Microsoft.VisualStudio.Settings;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
 namespace Documentation.Common
 {
@@ -12,7 +7,7 @@ namespace Documentation.Common
         public static TValue? GetValue<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key)
         {
             TValue result;
-            if(dictionary.TryGetValue(key, out result))
+            if (dictionary.TryGetValue(key, out result))
                 return result;
 
             return default;

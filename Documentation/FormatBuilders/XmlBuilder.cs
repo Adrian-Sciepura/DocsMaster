@@ -1,5 +1,4 @@
 ﻿using Documentation.Models;
-using System.IO;
 using System.Xml.Linq;
 
 namespace Documentation.FormatBuilders

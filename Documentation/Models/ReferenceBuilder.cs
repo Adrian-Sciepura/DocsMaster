@@ -8,12 +8,12 @@ using System.Text;
 
 namespace Documentation.Models
 {
-    internal class ProjectTreeReferences
+    internal class ReferenceBuilder
     {
         private Queue<CodeRegularDeclaration> DeclarationsToAddReference;
         private Dictionary<string, CodeElement> References;
 
-        public ProjectTreeReferences()
+        public ReferenceBuilder()
         {
             References = new Dictionary<string, CodeElement>();
             DeclarationsToAddReference = new Queue<CodeRegularDeclaration>();
@@ -41,7 +41,7 @@ namespace Documentation.Models
         public void AddReference(CodeElement codeElementReference)
         {
             string? key = codeElementReference.Declaration.GetFullName();
-            
+
             if (key == null)
                 return;
 
@@ -49,7 +49,7 @@ namespace Documentation.Models
                 References.Add(key, codeElementReference);
         }
 
-        public void AddReferencesToElements()
+        public void AddReferencesToTreeElements()
         {
             CodeElement reference;
 
@@ -77,7 +77,7 @@ namespace Documentation.Models
 
             List<BaseCodeDeclarationKind> subTypes = genericParameters?.Select(x => new CodeRegularDeclaration(x.Identifier.ValueText, null)).ToList<BaseCodeDeclarationKind>();
             CodeGenericDeclaration genericMethodDeclaration = new CodeGenericDeclaration(subTypes, new CodeRegularDeclaration(name, sb.ToString()));
-           
+
             return genericMethodDeclaration;
         }
 
@@ -108,7 +108,7 @@ namespace Documentation.Models
 
             if (typeSyntax is GenericNameSyntax genericTypeSyntax)
             {
-                List<BaseCodeDeclarationKind> subTypes = 
+                List<BaseCodeDeclarationKind> subTypes =
                     genericTypeSyntax.TypeArgumentList.Arguments.Select(x => GetVariableDeclaration(x, semanticModel)).ToList();
 
                 if (fullName != null) fullName += $"<{subTypes.Count}>";

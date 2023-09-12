@@ -396,9 +396,9 @@ namespace Documentation.FormatBuilders
         private const string INTERFACE_DECLARATION_SELECTOR = "InterfaceDeclaration";
         private const string DELEGATE_DECLARATION_SELECTOR = "DelegateDeclaration";
         private const string ENUM_DECLARATION_SELECTOR = "EnumDeclaration";
-        
+
         private const string METHOD_DECLARATION_SELECTOR = "MethodDeclaration";
-        
+
         private const string METHOD_PARAMETER_NAME_SELECTOR = "MethodParameterName";
         private const string VARIABLE_NAME_SELECTOR = "VariableName";
         private const string KEYWORD_SELECTOR = "Keyword";
@@ -431,7 +431,7 @@ namespace Documentation.FormatBuilders
                 while (parentType != null && !targetType.Contains(parentType.GetElement().Type))
                     parentType = parentType.GetParent();
 
-            
+
             while (parentType != null)
             {
                 elements.Push(parentType.GetElement().Declaration.GetName());
@@ -448,7 +448,7 @@ namespace Documentation.FormatBuilders
         {
             StringBuilder sb = new StringBuilder();
 
-            if(includePath)
+            if (includePath)
             {
                 switch (fileLayout)
                 {
@@ -467,9 +467,9 @@ namespace Documentation.FormatBuilders
                         throw new ArgumentException($"Unknown file layout: {fileLayout}");
                 }
             }
-            
 
-            if(includeHash)
+
+            if (includeHash)
             {
                 sb.Append('#');
                 sb.Append(codeElement.Declaration.GetHash());
@@ -480,7 +480,7 @@ namespace Documentation.FormatBuilders
 
         private static string GetSubType(CodeElementType elementType)
         {
-            switch(elementType)
+            switch (elementType)
             {
                 case CodeElementType.Class: return CLASS_DECLARATION_SELECTOR;
                 case CodeElementType.Record: return RECORD_DECLARATION_SELECTOR;
@@ -707,7 +707,7 @@ namespace Documentation.FormatBuilders
                 //sb.Append("<pre>");
                 sb.Append(Documentation(fileLayout, codeElement.Documentation, indent + "  "));
             }
-            
+
             return sb;
         }
 
@@ -899,11 +899,11 @@ namespace Documentation.FormatBuilders
                     currentCodeElementType = internalType.Type;
                 }
 
-                
-                
+
+
                 var declaration = ConvertCodeElementToMarkdown[(internalType.Type, fileLayout)](fileLayout, internalType, "");
 
-                var docsDescription = internalType.Documentation?.Summary != null ? 
+                var docsDescription = internalType.Documentation?.Summary != null ?
                     ConvertDocumentationElementToMarkdown.GetValue(CodeDocumentationElementType.Summary)?.Invoke(fileLayout, internalType.Documentation.Summary, string.Empty).ToString() : string.Empty;
 
                 sb.Append($"| {declaration} | {docsDescription} |\n");
@@ -955,10 +955,10 @@ namespace Documentation.FormatBuilders
         private static StringBuilder DelegateSplitByType(FileLayout fileLayout, CodeElement codeElement, string indent)
         {
             CodeDelegate codeDelegate = codeElement as CodeDelegate;
-            
+
             StringBuilder headerBuilder = new StringBuilder();
             AddElementWithSelector(codeDelegate.AccessModifier, KEYWORD_SELECTOR, headerBuilder);
-            headerBuilder.AppendWithSpace($" <span class=\"{KEYWORD_SELECTOR}\">>delegate</span>");
+            headerBuilder.AppendWithSpace($" <span class=\"{KEYWORD_SELECTOR}\">delegate</span>");
             headerBuilder.AppendWithSpace(codeDelegate.ReturnType);
             headerBuilder.Append(DeclarationDefault(fileLayout, codeDelegate.Declaration, TYPE_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR));
             headerBuilder.Append(MethodParametersDefault(fileLayout, codeDelegate.Parameters));

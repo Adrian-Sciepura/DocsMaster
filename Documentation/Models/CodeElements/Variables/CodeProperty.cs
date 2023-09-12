@@ -1,9 +1,6 @@
-﻿using Documentation.Common;
-using Documentation.Models.CodeElements.Documentation;
+﻿using Documentation.Models.CodeElements.Documentation;
 using Documentation.Models.CodeElements.TypeKind;
-using Documentation.Models.CodeElements.Types;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Documentation.Models.CodeElements.Variables
 {

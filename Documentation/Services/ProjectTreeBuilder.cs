@@ -17,7 +17,9 @@ namespace Documentation.Services
 {
     internal static class ProjectTreeBuilder
     {
-        private delegate void SyntaxElementAction(DocsInfo docsInfo, ProjectStructureTree projectStructureTree, ProjectStructureTreeNode projectStructureTreeNode, SyntaxNode codeElement, IParentType parentReference);
+        private record SyntaxActionStaticParams(DocsInfo docsInfo, ProjectStructureTree projetStructureTree, ReferenceBuilder references);
+        private record SyntaxActionParams(SemanticModel semanticModel, ProjectStructureTreeNode currentNode, SyntaxNode codeElement, IParentType parentReference);
+        private delegate void SyntaxElementAction(SyntaxActionStaticParams sp, SyntaxActionParams p);
 
         private static readonly Dictionary<SyntaxKind, SyntaxElementAction> syntaxElementFunctions = new Dictionary<SyntaxKind, SyntaxElementAction>()
             {
@@ -46,25 +48,13 @@ namespace Documentation.Services
                 { SyntaxKind.PropertyDeclaration, AnalyzePropertyDeclaration }
             };
 
-        private static readonly Dictionary<string, Tuple<CodeNamespace, BaseCodeType>> declaredTypesInfo = new Dictionary<string, Tuple<CodeNamespace, BaseCodeType>>();
-        private static ProjectTreeReferences references;
-        private static SemanticModel csharpSemanticModel;
 
-
-        #region Main Functions
+        #region Help Functions
         private static CSharpCompilation GetCompilation(List<SyntaxTree> trees)
         {
-            /*string outputPath = await project.GetAttributeAsync("OutputPath");
-            string assemblyName = await project.GetAttributeAsync("AssemblyName");
-            string folderPath = Path.GetDirectoryName(project.FullPath);
-            string fullAssemblyPath = Path.Combine(folderPath, outputPath, Path.GetExtension(assemblyName) == ".dll" ? assemblyName : $"{assemblyName}.dll");
-            */
-            //var assembly = Assembly.LoadFrom(fullAssemblyPath);
-
-            var compilation = CSharpCompilation.Create("TestCompilation").AddSyntaxTrees(trees);
-            return compilation;
+            return CSharpCompilation.Create("TestCompilation").AddSyntaxTrees(trees);
         }
-        
+
         private static List<SyntaxTree> SetupSyntaxTrees(DocsInfo docsInfo)
         {
             List<SyntaxTree> syntaxTrees = new List<SyntaxTree>();
@@ -110,55 +100,43 @@ namespace Documentation.Services
             return result;
         }
 
-        private static async Task AnalyzeSyntaxAsync(DocsInfo docsInfo, ProjectStructureTree tree, SyntaxTree syntaxTree, CSharpCompilation compilation)
+        private static async Task AnalyzeSyntaxAsync(SyntaxActionStaticParams sp, SyntaxTree syntaxTree, CSharpCompilation compilation)
         {
             var syntax = (await syntaxTree.GetRootAsync()).DescendantNodes();
-            csharpSemanticModel = compilation.GetSemanticModel(syntaxTree);
+            SemanticModel semanticModel = compilation.GetSemanticModel(syntaxTree);
             foreach (var codeElement in syntax)
             {
                 var kind = codeElement.Kind();
                 if (kind == SyntaxKind.FileScopedNamespaceDeclaration || kind == SyntaxKind.NamespaceDeclaration)
-                    AnalyzeNamespaceDeclaration(docsInfo, tree, null, codeElement, null);
+                    AnalyzeNamespaceDeclaration(sp, new SyntaxActionParams(semanticModel, null, codeElement, null));
             }
         }
 
-
-        #endregion
-
-        #region Help Functions
-
-        private static void Cleanup()
-        {
-            declaredTypesInfo.Clear();
-            //elementsToAddReference.Clear();
-        }
-
-        private static void AnalyzeMembers(DocsInfo docsInfo, ProjectStructureTree tree, ProjectStructureTreeNode currentNode, IParentType parentReference, SyntaxList<MemberDeclarationSyntax> members)
+        private static void AnalyzeMembers(SyntaxActionStaticParams sp, SyntaxActionParams p, SyntaxList<MemberDeclarationSyntax> members)
         {
             SyntaxElementAction action;
 
             foreach (var member in members)
                 if (syntaxElementFunctions.TryGetValue(member.Kind(), out action))
-                    action.Invoke(docsInfo, tree, currentNode, member, parentReference);
+                    action.Invoke(sp, new SyntaxActionParams(p.semanticModel, p.currentNode, member, p.parentReference));
         }
 
         #endregion
 
 
-
         #region Analyze Namespace
 
-        private static void AnalyzeNamespaceDeclaration(DocsInfo docsInfo, ProjectStructureTree tree, ProjectStructureTreeNode currentNode, SyntaxNode codeElement, IParentType parentReference)
+        private static void AnalyzeNamespaceDeclaration(SyntaxActionStaticParams sp, SyntaxActionParams p)
         {
-            BaseNamespaceDeclarationSyntax baseNamespaceDeclaration = codeElement as BaseNamespaceDeclarationSyntax;
+            BaseNamespaceDeclarationSyntax baseNamespaceDeclaration = p.codeElement as BaseNamespaceDeclarationSyntax;
 
             string namespaceName = baseNamespaceDeclaration.Name.ToString();
-            ProjectStructureTreeNode changeNode = GetCurrentNode(docsInfo, tree, namespaceName);
+            ProjectStructureTreeNode changeNode = GetCurrentNode(sp.docsInfo, sp.projetStructureTree, namespaceName);
 
             if (changeNode.NamespaceReference == null)
                 changeNode.NamespaceReference = new CodeNamespace(namespaceName);
 
-            AnalyzeMembers(docsInfo, tree, changeNode, changeNode.NamespaceReference, baseNamespaceDeclaration.Members);
+            AnalyzeMembers(sp, new SyntaxActionParams(p.semanticModel, changeNode, p.codeElement, changeNode.NamespaceReference), baseNamespaceDeclaration.Members);
             changeNode.NamespaceReference.InternalTypes.Sort();
         }
 
@@ -166,129 +144,124 @@ namespace Documentation.Services
 
         #region Analyze Types
 
-        private static void AnalyzeDelegateDeclaration(DocsInfo docsInfo, ProjectStructureTree tree, ProjectStructureTreeNode currentNode, SyntaxNode codeElement, IParentType parentReference)
+        private static void AnalyzeDelegateDeclaration(SyntaxActionStaticParams sp, SyntaxActionParams p)
         {
-            DelegateDeclarationSyntax delegateDeclaration = codeElement as DelegateDeclarationSyntax;
+            DelegateDeclarationSyntax delegateDeclaration = p.codeElement as DelegateDeclarationSyntax;
 
             CodeDelegate codeDelegate = new CodeDelegate(
-                parent: parentReference,
-                namespaceReference: currentNode.NamespaceReference,
-                declaration: references.GetTypeDeclaration(codeElement, csharpSemanticModel, delegateDeclaration.Identifier.ValueText, delegateDeclaration.TypeParameterList?.Parameters),
+                parent: p.parentReference,
+                namespaceReference: p.currentNode.NamespaceReference,
+                declaration: sp.references.GetTypeDeclaration(p.codeElement, p.semanticModel, delegateDeclaration.Identifier.ValueText, delegateDeclaration.TypeParameterList?.Parameters),
                 accessModifier: delegateDeclaration.Modifiers.ToString(),
                 returnType: delegateDeclaration.ReturnType.ToString(),
-                parameters: delegateDeclaration.ParameterList.Parameters.Select(x => new CodeVariable(references.GetVariableDeclaration(x.Type, csharpSemanticModel), currentNode.NamespaceReference, null, x.Identifier.ValueText)).ToList(),
-                documentation: AnalyzeDocumentation(codeElement));
+                parameters: delegateDeclaration.ParameterList.Parameters.Select(x => new CodeVariable(sp.references.GetVariableDeclaration(x.Type, p.semanticModel), p.currentNode.NamespaceReference, null, x.Identifier.ValueText)).ToList(),
+                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
 
             codeDelegate.Declaration.AddReference(codeDelegate);
-            parentReference.AddInternalElement(codeDelegate);
-            references.AddReference(codeDelegate);
-            //AddTypeReference(currentNode, codeDelegate);
+            p.parentReference.AddInternalElement(codeDelegate);
+            sp.references.AddReference(codeDelegate);
         }
 
-        private static void AnalyzeClassDeclaration(DocsInfo docsInfo, ProjectStructureTree tree, ProjectStructureTreeNode currentNode, SyntaxNode codeElement, IParentType parentReference)
+        private static void AnalyzeClassDeclaration(SyntaxActionStaticParams sp, SyntaxActionParams p)
         {
-            ClassDeclarationSyntax classDeclaration = codeElement as ClassDeclarationSyntax;
+            ClassDeclarationSyntax classDeclaration = p.codeElement as ClassDeclarationSyntax;
 
             CodeType codeClass = new CodeType(
-                parent: parentReference,
-                namespaceReference: currentNode.NamespaceReference,
+                parent: p.parentReference,
+                namespaceReference: p.currentNode.NamespaceReference,
                 type: CodeElementType.Class,
-                declaration: references.GetTypeDeclaration(codeElement, csharpSemanticModel, classDeclaration.Identifier.ValueText, classDeclaration.TypeParameterList?.Parameters),
-                //name: classDeclaration.Identifier.ValueText,
+                declaration: sp.references.GetTypeDeclaration(p.codeElement, p.semanticModel, classDeclaration.Identifier.ValueText, classDeclaration.TypeParameterList?.Parameters),
                 accessModifier: classDeclaration.Modifiers.ToString(),
-                documentation: AnalyzeDocumentation(codeElement));
+                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
 
             codeClass.Declaration.AddReference(codeClass);
-            parentReference.AddInternalElement(codeClass);
-            AnalyzeMembers(docsInfo, tree, currentNode, codeClass, classDeclaration.Members);
+            p.parentReference.AddInternalElement(codeClass);
+            AnalyzeMembers(sp, new SyntaxActionParams(p.semanticModel, p.currentNode, p.codeElement, codeClass), classDeclaration.Members);
             codeClass.Members.Sort();
-            references.AddReference(codeClass);
-            //AddTypeReference(currentNode, codeClass);
+            sp.references.AddReference(codeClass);
         }
 
-        private static void AnalyzeRecordDeclaration(DocsInfo docsInfo, ProjectStructureTree tree, ProjectStructureTreeNode currentNode, SyntaxNode codeElement, IParentType parentReference)
+        private static void AnalyzeRecordDeclaration(SyntaxActionStaticParams sp, SyntaxActionParams p)
         {
-            RecordDeclarationSyntax recordDeclaration = codeElement as RecordDeclarationSyntax;
+            RecordDeclarationSyntax recordDeclaration = p.codeElement as RecordDeclarationSyntax;
 
             CodeType codeRecord = new CodeType(
-                parent: parentReference,
-                namespaceReference: currentNode.NamespaceReference,
+                parent: p.parentReference,
+                namespaceReference: p.currentNode.NamespaceReference,
                 type: CodeElementType.Record,
-                declaration: references.GetTypeDeclaration(codeElement, csharpSemanticModel, recordDeclaration.Identifier.ValueText, recordDeclaration.TypeParameterList?.Parameters),
-                //name: recordDeclaration.Identifier.ValueText,
+                declaration: sp.references.GetTypeDeclaration(p.codeElement, p.semanticModel, recordDeclaration.Identifier.ValueText, recordDeclaration.TypeParameterList?.Parameters),
                 accessModifier: recordDeclaration.Modifiers.ToString(),
-                documentation: AnalyzeDocumentation(codeElement));
+                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
 
 
             if (recordDeclaration.ParameterList != null)
                 foreach (var variable in recordDeclaration.ParameterList.Parameters)
-                    codeRecord.Members.Add(new CodeVariable(references.GetVariableDeclaration(variable.Type, csharpSemanticModel), currentNode.NamespaceReference, null, variable.Identifier.ValueText));
+                    codeRecord.Members.Add(new CodeVariable(sp.references.GetVariableDeclaration(variable.Type, p.semanticModel), p.currentNode.NamespaceReference, null, variable.Identifier.ValueText));
 
 
             codeRecord.Declaration.AddReference(codeRecord);
-            parentReference.AddInternalElement(codeRecord);
-            AnalyzeMembers(docsInfo, tree, currentNode, codeRecord, recordDeclaration.Members);
+            p.parentReference.AddInternalElement(codeRecord);
+            AnalyzeMembers(sp, new SyntaxActionParams(p.semanticModel, p.currentNode, p.codeElement, codeRecord), recordDeclaration.Members);
             codeRecord.Members.Sort();
-            references.AddReference(codeRecord);
-            //AddTypeReference(currentNode, codeRecord);
+            sp.references.AddReference(codeRecord);
         }
 
-        private static void AnalyzeInterfaceDeclaration(DocsInfo docsInfo, ProjectStructureTree tree, ProjectStructureTreeNode currentNode, SyntaxNode codeElement, IParentType parentReference)
+        private static void AnalyzeInterfaceDeclaration(SyntaxActionStaticParams sp, SyntaxActionParams p)
         {
-            InterfaceDeclarationSyntax interfaceDeclaration = codeElement as InterfaceDeclarationSyntax;
+            InterfaceDeclarationSyntax interfaceDeclaration = p.codeElement as InterfaceDeclarationSyntax;
 
             CodeType codeInterface = new CodeType(
-                parent: parentReference,
-                namespaceReference: currentNode.NamespaceReference,
+                parent: p.parentReference,
+                namespaceReference: p.currentNode.NamespaceReference,
                 type: CodeElementType.Interface,
-                declaration: references.GetTypeDeclaration(codeElement, csharpSemanticModel, interfaceDeclaration.Identifier.ValueText, interfaceDeclaration.TypeParameterList?.Parameters),
+                declaration: sp.references.GetTypeDeclaration(p.codeElement, p.semanticModel, interfaceDeclaration.Identifier.ValueText, interfaceDeclaration.TypeParameterList?.Parameters),
                 accessModifier: interfaceDeclaration.Modifiers.ToString(),
-                documentation: AnalyzeDocumentation(codeElement));
+                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
 
-            
+
             codeInterface.Declaration.AddReference(codeInterface);
-            parentReference.AddInternalElement(codeInterface);
-            AnalyzeMembers(docsInfo, tree, currentNode, codeInterface, interfaceDeclaration.Members);
+            p.parentReference.AddInternalElement(codeInterface);
+            AnalyzeMembers(sp, new SyntaxActionParams(p.semanticModel, p.currentNode, p.codeElement, codeInterface), interfaceDeclaration.Members);
             codeInterface.Members.Sort();
-            references.AddReference(codeInterface);
+            sp.references.AddReference(codeInterface);
         }
 
-        private static void AnalyzeStructDeclaration(DocsInfo docsInfo, ProjectStructureTree tree, ProjectStructureTreeNode currentNode, SyntaxNode codeElement, IParentType parentReference)
+        private static void AnalyzeStructDeclaration(SyntaxActionStaticParams sp, SyntaxActionParams p)
         {
-            StructDeclarationSyntax structDeclaration = codeElement as StructDeclarationSyntax;
+            StructDeclarationSyntax structDeclaration = p.codeElement as StructDeclarationSyntax;
 
             CodeType codeStruct = new CodeType(
-                parent: parentReference,
-                namespaceReference: currentNode.NamespaceReference,
+                parent: p.parentReference,
+                namespaceReference: p.currentNode.NamespaceReference,
                 type: CodeElementType.Struct,
-                declaration: references.GetTypeDeclaration(codeElement, csharpSemanticModel, structDeclaration.Identifier.ValueText, structDeclaration.TypeParameterList?.Parameters),
+                declaration: sp.references.GetTypeDeclaration(p.codeElement, p.semanticModel, structDeclaration.Identifier.ValueText, structDeclaration.TypeParameterList?.Parameters),
                 accessModifier: structDeclaration.Modifiers.ToString(),
-                documentation: AnalyzeDocumentation(codeElement));
+                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
 
 
             codeStruct.Declaration.AddReference(codeStruct);
-            parentReference.AddInternalElement(codeStruct);
-            AnalyzeMembers(docsInfo, tree, currentNode, codeStruct, structDeclaration.Members);
+            p.parentReference.AddInternalElement(codeStruct);
+            AnalyzeMembers(sp, new SyntaxActionParams(p.semanticModel, p.currentNode, p.codeElement, codeStruct), structDeclaration.Members);
             codeStruct.Members.Sort();
-            references.AddReference(codeStruct);
+            sp.references.AddReference(codeStruct);
         }
 
-        private static void AnalyzeEnumDeclaration(DocsInfo docsInfo, ProjectStructureTree tree, ProjectStructureTreeNode currentNode, SyntaxNode codeElement, IParentType parentReference)
+        private static void AnalyzeEnumDeclaration(SyntaxActionStaticParams sp, SyntaxActionParams p)
         {
-            EnumDeclarationSyntax enumDeclaration = codeElement as EnumDeclarationSyntax;
+            EnumDeclarationSyntax enumDeclaration = p.codeElement as EnumDeclarationSyntax;
 
             CodeEnum codeEnum = new CodeEnum(
-                parent: parentReference,
-                namespaceReference: currentNode.NamespaceReference,
-                declaration: (CodeRegularDeclaration)references.GetTypeDeclaration(codeElement, csharpSemanticModel, enumDeclaration.Identifier.ValueText, null),
+                parent: p.parentReference,
+                namespaceReference: p.currentNode.NamespaceReference,
+                declaration: (CodeRegularDeclaration)sp.references.GetTypeDeclaration(p.codeElement, p.semanticModel, enumDeclaration.Identifier.ValueText, null),
                 accessModifier: enumDeclaration.Modifiers.ToString(),
                 elements: new List<string>(enumDeclaration.Members.Select(x => x.Identifier.ValueText)),
-                documentation: AnalyzeDocumentation(codeElement));
+                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
 
 
             codeEnum.Declaration.AddReference(codeEnum);
-            parentReference.AddInternalElement(codeEnum);
-            references.AddReference(codeEnum);
+            p.parentReference.AddInternalElement(codeEnum);
+            sp.references.AddReference(codeEnum);
         }
 
         #endregion
@@ -297,7 +270,7 @@ namespace Documentation.Services
 
         #region Documentation Comments
 
-        private static CodeDocumentation? AnalyzeDocumentation(SyntaxNode node)
+        private static CodeDocumentation? AnalyzeDocumentation(ReferenceBuilder references, SemanticModel semanticModel, SyntaxNode node)
         {
             DocumentationCommentTriviaSyntax documentationComment = node.GetLeadingTrivia()
                 .Select(trivia => trivia.GetStructure())
@@ -309,122 +282,121 @@ namespace Documentation.Services
 
             var childNodes = documentationComment.ChildNodes().OfType<XmlElementSyntax>();
 
-            return childNodes.Count() > 0 ? CodeDocumentationBuilder.BuildDocumentation(childNodes, csharpSemanticModel, references) : null;
+            return childNodes.Count() > 0 ? CodeDocumentationBuilder.BuildDocumentation(childNodes, semanticModel, references) : null;
         }
 
         #endregion
 
         #region Method members
 
-        private static void AnalyzeMethodDeclaration(DocsInfo docsInfo, ProjectStructureTree tree, ProjectStructureTreeNode currentNode, SyntaxNode codeElement, IParentType parentReference)
+        private static void AnalyzeMethodDeclaration(SyntaxActionStaticParams sp, SyntaxActionParams p)
         {
-            MethodDeclarationSyntax methodDeclaration = codeElement as MethodDeclarationSyntax;
+            MethodDeclarationSyntax methodDeclaration = p.codeElement as MethodDeclarationSyntax;
 
             CodeMethod codeMethod = new CodeMethod(
-                parent: parentReference,
-                namespaceReference: currentNode.NamespaceReference,
-                declaration: references.GetMethodDeclaration(methodDeclaration, methodDeclaration.Identifier.ValueText, csharpSemanticModel, methodDeclaration.TypeParameterList?.Parameters),
+                parent: p.parentReference,
+                namespaceReference: p.currentNode.NamespaceReference,
+                declaration: sp.references.GetMethodDeclaration(methodDeclaration, methodDeclaration.Identifier.ValueText, p.semanticModel, methodDeclaration.TypeParameterList?.Parameters),
                 accessModifier: methodDeclaration.Modifiers.ToString(),
-                returnType: references.GetVariableDeclaration(methodDeclaration.ReturnType, csharpSemanticModel),
-                parameters: methodDeclaration.ParameterList.Parameters.Select(x => new CodeVariable(references.GetVariableDeclaration(x.Type, csharpSemanticModel), currentNode.NamespaceReference, null, x.Identifier.ValueText)).ToList(),
-                documentation: AnalyzeDocumentation(codeElement));
+                returnType: sp.references.GetVariableDeclaration(methodDeclaration.ReturnType, p.semanticModel),
+                parameters: methodDeclaration.ParameterList.Parameters.Select(x => new CodeVariable(sp.references.GetVariableDeclaration(x.Type, p.semanticModel), p.currentNode.NamespaceReference, null, x.Identifier.ValueText)).ToList(),
+                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
 
-            parentReference.AddInternalElement(codeMethod);
+            p.parentReference.AddInternalElement(codeMethod);
         }
 
-        private static void AnalyzeContructorDeclaration(DocsInfo docsInfo, ProjectStructureTree tree, ProjectStructureTreeNode currentNode, SyntaxNode codeElement, IParentType parentReference)
+        private static void AnalyzeContructorDeclaration(SyntaxActionStaticParams sp, SyntaxActionParams p)
         {
-            ConstructorDeclarationSyntax constructorDeclaration = codeElement as ConstructorDeclarationSyntax;
+            ConstructorDeclarationSyntax constructorDeclaration = p.codeElement as ConstructorDeclarationSyntax;
 
             CodeConstructor constructorMethod = new CodeConstructor(
-                parent: parentReference,
-                namespaceReference: currentNode.NamespaceReference,
-                declaration: (CodeRegularDeclaration)references.GetMethodDeclaration(constructorDeclaration, constructorDeclaration.Identifier.ValueText, csharpSemanticModel, null),
+                parent: p.parentReference,
+                namespaceReference: p.currentNode.NamespaceReference,
+                declaration: (CodeRegularDeclaration)sp.references.GetMethodDeclaration(constructorDeclaration, constructorDeclaration.Identifier.ValueText, p.semanticModel, null),
                 accessModifier: constructorDeclaration.Modifiers.ToString(),
-                parameters: constructorDeclaration.ParameterList.Parameters.Select(x => new CodeVariable(references.GetVariableDeclaration(x.Type, csharpSemanticModel), currentNode.NamespaceReference, null, x.Identifier.ValueText)).ToList(),
-                documentation: AnalyzeDocumentation(codeElement));
+                parameters: constructorDeclaration.ParameterList.Parameters.Select(x => new CodeVariable(sp.references.GetVariableDeclaration(x.Type, p.semanticModel), p.currentNode.NamespaceReference, null, x.Identifier.ValueText)).ToList(),
+                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
 
-            parentReference.AddInternalElement(constructorMethod);
+            p.parentReference.AddInternalElement(constructorMethod);
         }
 
-        private static void AnalyzeDestructorDeclaration(DocsInfo docsInfo, ProjectStructureTree tree, ProjectStructureTreeNode currentNode, SyntaxNode codeElement, IParentType parentReference)
+        private static void AnalyzeDestructorDeclaration(SyntaxActionStaticParams sp, SyntaxActionParams p)
         {
-            DestructorDeclarationSyntax destructorDeclaration = codeElement as DestructorDeclarationSyntax;
+            DestructorDeclarationSyntax destructorDeclaration = p.codeElement as DestructorDeclarationSyntax;
 
             CodeDestructor destructorMethod = new CodeDestructor(
-                parent: parentReference,
-                namespaceReference: currentNode.NamespaceReference,
-                declaration: (CodeRegularDeclaration)references.GetMethodDeclaration(destructorDeclaration, destructorDeclaration.Identifier.ValueText, csharpSemanticModel, null),
-                documentation: AnalyzeDocumentation(codeElement));
+                parent: p.parentReference,
+                namespaceReference: p.currentNode.NamespaceReference,
+                declaration: (CodeRegularDeclaration)sp.references.GetMethodDeclaration(destructorDeclaration, destructorDeclaration.Identifier.ValueText, p.semanticModel, null),
+                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
 
-            parentReference.AddInternalElement(destructorMethod);
+            p.parentReference.AddInternalElement(destructorMethod);
         }
 
-        private static void AnalyzeOperatorDeclaration(DocsInfo docsInfo, ProjectStructureTree tree, ProjectStructureTreeNode currentNode, SyntaxNode codeElement, IParentType parentReference)
+        private static void AnalyzeOperatorDeclaration(SyntaxActionStaticParams sp, SyntaxActionParams p)
         {
-            OperatorDeclarationSyntax operatorDeclaration = codeElement as OperatorDeclarationSyntax;
+            OperatorDeclarationSyntax operatorDeclaration = p.codeElement as OperatorDeclarationSyntax;
 
             CodeOperator operatorMethod = new CodeOperator(
-                parent: parentReference,
-                namespaceReference: currentNode.NamespaceReference,
-                declaration: (CodeRegularDeclaration)references.GetMethodDeclaration(operatorDeclaration, operatorDeclaration.OperatorToken.ValueText, csharpSemanticModel, null),
-                //name: operatorDeclaration.OperatorToken.ValueText,
+                parent: p.parentReference,
+                namespaceReference: p.currentNode.NamespaceReference,
+                declaration: (CodeRegularDeclaration)sp.references.GetMethodDeclaration(operatorDeclaration, operatorDeclaration.OperatorToken.ValueText, p.semanticModel, null),
                 accessModifier: operatorDeclaration.Modifiers.ToString(),
-                returnType: references.GetVariableDeclaration(operatorDeclaration.ReturnType, csharpSemanticModel),
-                parameters: operatorDeclaration.ParameterList.Parameters.Select(x => new CodeVariable(references.GetVariableDeclaration(x.Type, csharpSemanticModel), currentNode.NamespaceReference, null, x.Identifier.ValueText)).ToList(),
-                documentation: AnalyzeDocumentation(codeElement));
+                returnType: sp.references.GetVariableDeclaration(operatorDeclaration.ReturnType, p.semanticModel),
+                parameters: operatorDeclaration.ParameterList.Parameters.Select(x => new CodeVariable(sp.references.GetVariableDeclaration(x.Type, p.semanticModel), p.currentNode.NamespaceReference, null, x.Identifier.ValueText)).ToList(),
+                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
 
-            parentReference.AddInternalElement(operatorMethod);
+            p.parentReference.AddInternalElement(operatorMethod);
         }
 
-        private static void AnalyzeConversionOperatorDeclaration(DocsInfo docsInfo, ProjectStructureTree tree, ProjectStructureTreeNode currentNode, SyntaxNode codeElement, IParentType parentReference)
+        private static void AnalyzeConversionOperatorDeclaration(SyntaxActionStaticParams sp, SyntaxActionParams p)
         {
-            ConversionOperatorDeclarationSyntax conversionOperatorDeclaration = codeElement as ConversionOperatorDeclarationSyntax;
+            ConversionOperatorDeclarationSyntax conversionOperatorDeclaration = p.codeElement as ConversionOperatorDeclarationSyntax;
 
             CodeOperator conversionOperatorMethod = new CodeOperator(
-                parent: parentReference,
-                namespaceReference: currentNode.NamespaceReference,
-                declaration: (CodeRegularDeclaration)references.GetMethodDeclaration(conversionOperatorDeclaration, conversionOperatorDeclaration.Type.ToString(), csharpSemanticModel, null),
+                parent: p.parentReference,
+                namespaceReference: p.currentNode.NamespaceReference,
+                declaration: (CodeRegularDeclaration)sp.references.GetMethodDeclaration(conversionOperatorDeclaration, conversionOperatorDeclaration.Type.ToString(), p.semanticModel, null),
                 accessModifier: conversionOperatorDeclaration.Modifiers.ToString(),
                 returnType: new CodeRegularDeclaration(string.Empty, null),
-                parameters: conversionOperatorDeclaration.ParameterList.Parameters.Select(x => new CodeVariable(references.GetVariableDeclaration(x.Type, csharpSemanticModel), currentNode.NamespaceReference, null, x.Identifier.ValueText)).ToList(),
-                documentation: AnalyzeDocumentation(codeElement));
+                parameters: conversionOperatorDeclaration.ParameterList.Parameters.Select(x => new CodeVariable(sp.references.GetVariableDeclaration(x.Type, p.semanticModel), p.currentNode.NamespaceReference, null, x.Identifier.ValueText)).ToList(),
+                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
 
-            parentReference.AddInternalElement(conversionOperatorMethod);
+            p.parentReference.AddInternalElement(conversionOperatorMethod);
         }
 
         #endregion
 
         #region Variable members
-        private static void AnalyzeFieldDeclaration(DocsInfo docsInfo, ProjectStructureTree tree, ProjectStructureTreeNode currentNode, SyntaxNode codeElement, IParentType parentReference)
+        private static void AnalyzeFieldDeclaration(SyntaxActionStaticParams sp, SyntaxActionParams p)
         {
-            FieldDeclarationSyntax fieldDeclaration = codeElement as FieldDeclarationSyntax;
+            FieldDeclarationSyntax fieldDeclaration = p.codeElement as FieldDeclarationSyntax;
 
             CodeVariable codeVariable = new CodeVariable(
-                parent: parentReference,
-                namespaceReference: currentNode.NamespaceReference,
-                declaration: references.GetVariableDeclaration(fieldDeclaration.Declaration.Type, csharpSemanticModel),
+                parent: p.parentReference,
+                namespaceReference: p.currentNode.NamespaceReference,
+                declaration: sp.references.GetVariableDeclaration(fieldDeclaration.Declaration.Type, p.semanticModel),
                 accessModifier: fieldDeclaration.Modifiers.ToString(),
                 fieldName: string.Join(", ", fieldDeclaration.Declaration.Variables.Select(x => x.Identifier)),
-                documentation: AnalyzeDocumentation(codeElement));
-           
-            parentReference.AddInternalElement(codeVariable);
+                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
+
+            p.parentReference.AddInternalElement(codeVariable);
         }
 
-        private static void AnalyzePropertyDeclaration(DocsInfo docsInfo, ProjectStructureTree tree, ProjectStructureTreeNode currentNode, SyntaxNode codeElement, IParentType parentReference)
+        private static void AnalyzePropertyDeclaration(SyntaxActionStaticParams sp, SyntaxActionParams p)
         {
-            PropertyDeclarationSyntax propertyDeclaration = codeElement as PropertyDeclarationSyntax;
+            PropertyDeclarationSyntax propertyDeclaration = p.codeElement as PropertyDeclarationSyntax;
 
             CodeProperty codeProperty = new CodeProperty(
-                parent: parentReference,
-                namespaceReference: currentNode.NamespaceReference,
-                declaration: references.GetVariableDeclaration(propertyDeclaration.Type, csharpSemanticModel),
+                parent: p.parentReference,
+                namespaceReference: p.currentNode.NamespaceReference,
+                declaration: sp.references.GetVariableDeclaration(propertyDeclaration.Type, p.semanticModel),
                 accessModifier: propertyDeclaration.Modifiers.ToString(),
                 name: propertyDeclaration.Identifier.ValueText,
                 accessors: propertyDeclaration.AccessorList?.Accessors.Select(x => x.Keyword.ValueText).ToList(),
-                documentation: AnalyzeDocumentation(codeElement));
+                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
 
-            parentReference.AddInternalElement(codeProperty);
+            p.parentReference.AddInternalElement(codeProperty);
         }
 
         #endregion
@@ -433,19 +405,17 @@ namespace Documentation.Services
 
         public static async Task<ProjectStructureTree> BuildProjectTreeAsync(DocsInfo docsInfo)
         {
-            references = new ProjectTreeReferences();
+            ReferenceBuilder projectTreeReference = new ReferenceBuilder();
             ProjectStructureTree projectStructureTree = new ProjectStructureTree();
             List<SyntaxTree> syntaxTrees = SetupSyntaxTrees(docsInfo);
             var compilation = GetCompilation(syntaxTrees);
 
 
             foreach (var tree in syntaxTrees)
-                await AnalyzeSyntaxAsync(docsInfo, projectStructureTree, tree, compilation);
+                await AnalyzeSyntaxAsync(new SyntaxActionStaticParams(docsInfo, projectStructureTree, projectTreeReference), tree, compilation);
 
-            //AddReferencesToVariableDeclarations();
-            references.AddReferencesToElements();
-            Cleanup();
 
+            projectTreeReference.AddReferencesToTreeElements();
             return projectStructureTree;
         }
     }

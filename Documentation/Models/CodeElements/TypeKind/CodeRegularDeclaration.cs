@@ -1,8 +1,4 @@
-﻿using Documentation.Models.CodeElements.Types;
-using System.Text;
-using System.Xml.Linq;
-
-namespace Documentation.Models.CodeElements.TypeKind
+﻿namespace Documentation.Models.CodeElements.TypeKind
 {
     internal class CodeRegularDeclaration : BaseCodeDeclarationKind
     {
@@ -10,7 +6,7 @@ namespace Documentation.Models.CodeElements.TypeKind
         public string? FullName { get; set; }
         public string? FullNameHash { get; private set; }
         public CodeElement TypeReference { get; set; }
-        
+
         public CodeRegularDeclaration(string name, string? fullName)
         {
             Name = name;
