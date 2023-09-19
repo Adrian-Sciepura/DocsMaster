@@ -30,7 +30,10 @@ namespace Documentation.Services
                 }
             }
 
-            switch (_docsInfo.Configuration.FileLayout)
+            foreach (var builder in builders)
+                builder.Generate();
+
+            /*switch (_docsInfo.Configuration.FileLayout)
             {
                 case DocsConfiguration.FileLayoutType.AllInOne:
                     builders.ForEach(b => b.GenerateAllInOne());
@@ -41,7 +44,7 @@ namespace Documentation.Services
                 case DocsConfiguration.FileLayoutType.SplitByType:
                     builders.ForEach(b => b.GenerateSplitByType());
                     break;
-            }
+            }*/
         }
 
         public async Task BuildAsyncDebug()
@@ -66,7 +69,15 @@ namespace Documentation.Services
                 }
             }
 
-            switch (_docsInfo.Configuration.FileLayout)
+            foreach(var builder in builders)
+            {
+                watch.Restart();
+                builder.Generate();
+                watch.Stop();
+                extensionsBuildTime.Add($"{builder.GetType().Name}: {watch.Elapsed.TotalMilliseconds}");
+            }
+
+            /*switch (_docsInfo.Configuration.FileLayout)
             {
                 case DocsConfiguration.FileLayoutType.AllInOne:
                     builders.ForEach(b =>
@@ -95,7 +106,7 @@ namespace Documentation.Services
                         extensionsBuildTime.Add($"{b.GetType().Name}: {watch.Elapsed.TotalMilliseconds}");
                     });
                     break;
-            }
+            }*/
 
             string documentExportTime = watch.Elapsed.TotalMilliseconds.ToString();
 

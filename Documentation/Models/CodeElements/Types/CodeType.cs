@@ -29,6 +29,10 @@ namespace Documentation.Models.CodeElements.Types
             return Parent;
         }
 
+        public bool ContainsElement(CodeElement codeElement) => Members.Contains(codeElement);
+
+        public CodeElementType GetElementType() => Type;
+
         /*public override XElement ConvertToXml()
         {
             *//*XElement xmlType = new XElement(Type.ToString());

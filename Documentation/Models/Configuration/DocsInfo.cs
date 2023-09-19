@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using Documentation.Common;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Documentation.Models
 {
@@ -18,9 +20,12 @@ namespace Documentation.Models
             try
             {
                 string jsonFile = File.ReadAllText(_docsConfigurationPath);
-                result = JsonSerializer.Deserialize<DocsConfiguration>(jsonFile);
+                var serializeOptions = new JsonSerializerOptions();
+                serializeOptions.Converters.Add(new JsonStringEnumConverter());
+                serializeOptions.Converters.Add(new TypeSetupJsonConverter());
+                result = JsonSerializer.Deserialize<DocsConfiguration>(jsonFile, serializeOptions);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 CreateConfigFile();
                 result = DocsConfiguration.DefaultConfig();
@@ -31,9 +36,20 @@ namespace Documentation.Models
 
         private void CreateConfigFile()
         {
-            var config = DocsConfiguration.DefaultConfig();
+            DocsConfiguration config;
+            try
+            {
+                config = DocsConfiguration.DefaultConfig();
+            }
+            catch(Exception ex)
+            {
+                throw;
+            }
 
             var serializeOptions = new JsonSerializerOptions { WriteIndented = true };
+            serializeOptions.Converters.Add(new JsonStringEnumConverter());
+            //serializeOptions.Converters.Add(new TypeSetupJsonConverter());
+
             string json = JsonSerializer.Serialize(config, serializeOptions);
             File.WriteAllText(_docsConfigurationPath, json);
         }

@@ -13,9 +13,9 @@ namespace Documentation.FormatBuilders
             _solutionTree = solutionTree;
         }
 
-
-        public abstract void GenerateAllInOne();
+        public abstract void Generate();
+        /*public abstract void GenerateAllInOne();
         public abstract void GenerateSplitByNamespace();
-        public abstract void GenerateSplitByType();
+        public abstract void GenerateSplitByType();*/
     }
 }

@@ -55,6 +55,7 @@
   <ItemGroup>
     <Compile Include="Common\DictionaryExtensions.cs" />
     <Compile Include="Common\StringBuilderExtensions.cs" />
+    <Compile Include="Common\TypeSetupJsonConverter.cs" />
     <Compile Include="Models\CodeElements\Documentation\CodeDocumentationBuilder.cs" />
     <Compile Include="Models\CodeElements\Documentation\CodeDocumentationElement.cs" />
     <Compile Include="Models\CodeElements\IParentType.cs" />
@@ -81,8 +82,8 @@
     <Compile Include="Models\CodeElements\Types\CodeType.cs" />
     <Compile Include="Models\CodeElements\Variables\CodeVariable.cs" />
     <Compile Include="Models\CodeElements\Enums.cs" />
-    <Compile Include="Models\DocsConfiguration.cs" />
-    <Compile Include="Models\DocsInfo.cs" />
+    <Compile Include="Models\Configuration\DocsConfiguration.cs" />
+    <Compile Include="Models\Configuration\DocsInfo.cs" />
     <Compile Include="Models\ProjectStructureTree.cs" />
     <Compile Include="Models\ProjectStructureTreeNode.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

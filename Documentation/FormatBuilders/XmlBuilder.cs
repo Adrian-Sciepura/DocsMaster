@@ -46,6 +46,11 @@ namespace Documentation.FormatBuilders
                 BuildTreeDocumentRecursive(child, currentElement, currentPath);*/
         }
 
+        public override void Generate()
+        {
+            throw new NotImplementedException();
+        }
+
         public XmlBuilder(DocsInfo docsInfo, ProjectStructureTree projectStructureTree) :
             base(docsInfo, projectStructureTree)
         {
@@ -62,19 +67,6 @@ namespace Documentation.FormatBuilders
             xDocument.Save(Path.Combine(_docsInfo.DocsPath, "docs.xml"));
         }*/
 
-        public override void GenerateAllInOne()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void GenerateSplitByNamespace()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void GenerateSplitByType()
-        {
-            throw new NotImplementedException();
-        }
+        
     }
 }

@@ -29,5 +29,9 @@ namespace Documentation.Models.CodeElements
         {
             return null;
         }
+
+        public bool ContainsElement(CodeElement codeElement) => (codeElement is BaseCodeType internalType && InternalTypes.Contains(internalType));
+
+        public CodeElementType GetElementType() => CodeElementType.Namespace;
     }
 }
