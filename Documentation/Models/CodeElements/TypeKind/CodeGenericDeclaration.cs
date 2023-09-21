@@ -32,5 +32,10 @@ namespace Documentation.Models.CodeElements.TypeKind
         {
             MainType.TypeReference = codeElement;
         }
+
+        public override CodeElement GetTypeReference()
+        {
+            return MainType.TypeReference;
+        }
     }
 }

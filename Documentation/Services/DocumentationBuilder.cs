@@ -17,6 +17,9 @@ namespace Documentation.Services
 
         public async Task BuildAsync()
         {
+            if (_docsInfo.Configuration.ExtensionsToGenerate.Count == 0)
+                return;
+
             _solutionTree = await ProjectTreeBuilder.BuildProjectTreeAsync(_docsInfo);
 
             List<FormatBuilder> builders = new List<FormatBuilder>();
@@ -27,28 +30,21 @@ namespace Documentation.Services
                     case DocsConfiguration.SupportedExtensions.md:
                         builders.Add(new MarkDownBuilder(_docsInfo, _solutionTree));
                         break;
+                    case DocsConfiguration.SupportedExtensions.xml:
+                        builders.Add(new XmlBuilder(_docsInfo, _solutionTree));
+                        break;
                 }
             }
 
             foreach (var builder in builders)
                 builder.Generate();
-
-            /*switch (_docsInfo.Configuration.FileLayout)
-            {
-                case DocsConfiguration.FileLayoutType.AllInOne:
-                    builders.ForEach(b => b.GenerateAllInOne());
-                    break;
-                case DocsConfiguration.FileLayoutType.SplitByNamespace:
-                    builders.ForEach(b => b.GenerateSplitByNamespace());
-                    break;
-                case DocsConfiguration.FileLayoutType.SplitByType:
-                    builders.ForEach(b => b.GenerateSplitByType());
-                    break;
-            }*/
         }
 
         public async Task BuildAsyncDebug()
         {
+            if (_docsInfo.Configuration.ExtensionsToGenerate.Count == 0)
+                return;
+
             List<string> extensionsBuildTime = new List<string>();
             string treeBuildTime;
 
@@ -66,47 +62,19 @@ namespace Documentation.Services
                     case DocsConfiguration.SupportedExtensions.md:
                         builders.Add(new MarkDownBuilder(_docsInfo, _solutionTree));
                         break;
+                    case DocsConfiguration.SupportedExtensions.xml:
+                        builders.Add(new XmlBuilder(_docsInfo, _solutionTree));
+                        break;
                 }
             }
 
-            foreach(var builder in builders)
+            foreach (var builder in builders)
             {
                 watch.Restart();
                 builder.Generate();
                 watch.Stop();
                 extensionsBuildTime.Add($"{builder.GetType().Name}: {watch.Elapsed.TotalMilliseconds}");
             }
-
-            /*switch (_docsInfo.Configuration.FileLayout)
-            {
-                case DocsConfiguration.FileLayoutType.AllInOne:
-                    builders.ForEach(b =>
-                    {
-                        watch.Restart();
-                        b.GenerateAllInOne();
-                        watch.Stop();
-                        extensionsBuildTime.Add($"{b.GetType().Name}: {watch.Elapsed.TotalMilliseconds}");
-                    });
-                    break;
-                case DocsConfiguration.FileLayoutType.SplitByNamespace:
-                    builders.ForEach(b =>
-                    {
-                        watch.Restart();
-                        b.GenerateSplitByNamespace();
-                        watch.Stop();
-                        extensionsBuildTime.Add($"{b.GetType().Name}: {watch.Elapsed.TotalMilliseconds}");
-                    });
-                    break;
-                case DocsConfiguration.FileLayoutType.SplitByType:
-                    builders.ForEach(b =>
-                    {
-                        watch.Restart();
-                        b.GenerateSplitByType();
-                        watch.Stop();
-                        extensionsBuildTime.Add($"{b.GetType().Name}: {watch.Elapsed.TotalMilliseconds}");
-                    });
-                    break;
-            }*/
 
             string documentExportTime = watch.Elapsed.TotalMilliseconds.ToString();
 

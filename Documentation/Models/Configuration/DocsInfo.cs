@@ -1,4 +1,5 @@
 ﻿using Documentation.Common;
+using Documentation.Models.CodeElements;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
@@ -8,6 +9,25 @@ namespace Documentation.Models
 {
     internal class DocsInfo
     {
+        private void CheckTypesInDictionary(Dictionary<CodeElementType, bool> typeSetup)
+        {
+            SetToFalse(CodeElementType.Method);
+            SetToFalse(CodeElementType.Constructor);
+            SetToFalse(CodeElementType.Destructor);
+            SetToFalse(CodeElementType.Operator);
+            SetToFalse(CodeElementType.Property);
+            SetToFalse(CodeElementType.Variable);
+
+
+            void SetToFalse(CodeElementType type)
+            {
+                if (typeSetup.ContainsKey(type))
+                    typeSetup[type] = false;
+                else
+                    typeSetup.Add(type, false);
+            }
+        }
+
         private DocsConfiguration LoadConfig()
         {
             if (!Directory.Exists(DocsPath))
@@ -31,24 +51,17 @@ namespace Documentation.Models
                 result = DocsConfiguration.DefaultConfig();
             }
 
+            CheckTypesInDictionary(result.CodeElementsToGenerateInSeparateFile);
             return result;
         }
 
         private void CreateConfigFile()
         {
             DocsConfiguration config;
-            try
-            {
-                config = DocsConfiguration.DefaultConfig();
-            }
-            catch(Exception ex)
-            {
-                throw;
-            }
+            config = DocsConfiguration.DefaultConfig();
 
             var serializeOptions = new JsonSerializerOptions { WriteIndented = true };
             serializeOptions.Converters.Add(new JsonStringEnumConverter());
-            //serializeOptions.Converters.Add(new TypeSetupJsonConverter());
 
             string json = JsonSerializer.Serialize(config, serializeOptions);
             File.WriteAllText(_docsConfigurationPath, json);

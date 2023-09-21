@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Windows.Documents;
-
-namespace Documentation.Models.CodeElements
+﻿namespace Documentation.Models.CodeElements
 {
     internal interface IParentType
     {

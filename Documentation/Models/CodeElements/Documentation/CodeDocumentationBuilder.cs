@@ -18,29 +18,30 @@ namespace Documentation.Models.CodeElements.Documentation
 
         private static Dictionary<string, ActionForTag> RunAction = new Dictionary<string, ActionForTag>()
         {
-            { "summary",   (p) => p.documentation.Summary = ParseTag(p, CodeDocumentationElementType.Summary) },
-            { "remarks",   (p) => p.documentation.Remarks = ParseTag(p, CodeDocumentationElementType.Remarks) },
-            { "returns",   (p) => p.documentation.Returns = ParseTag(p, CodeDocumentationElementType.Returns) },
-            { "param",     (p) => p.documentation.Parameters.Add(ParseTag(p, CodeDocumentationElementType.Param)) },
-            { "typeparam", (p) => p.documentation.Parameters.Add(ParseTag(p, CodeDocumentationElementType.Typeparam)) },
-            { "exception", (p) => p.documentation.Exceptions.Add(ParseTag(p, CodeDocumentationElementType.Exception)) },
-            { "example",   (p) => p.documentation.Examples.Add(ParseTag(p, CodeDocumentationElementType.Example)) },
-            { "seealso",   (p) => p.documentation.SeeAlsos.Add(ParseTag(p, CodeDocumentationElementType.SeeAlso)) },
+            { "summary",        (p) => p.documentation.Summary = ParseTag(p, CodeDocumentationElementType.Summary) },
+            { "remarks",        (p) => p.documentation.Remarks = ParseTag(p, CodeDocumentationElementType.Remarks) },
+            { "returns",        (p) => p.documentation.Returns = ParseTag(p, CodeDocumentationElementType.Returns) },
+            { "param",          (p) => p.documentation.Parameters.Add(ParseTag(p, CodeDocumentationElementType.Param)) },
+            { "typeparam",      (p) => p.documentation.Parameters.Add(ParseTag(p, CodeDocumentationElementType.Typeparam)) },
+            { "exception",      (p) => p.documentation.Exceptions.Add(ParseTag(p, CodeDocumentationElementType.Exception)) },
+            { "example",        (p) => p.documentation.Examples.Add(ParseTag(p, CodeDocumentationElementType.Example)) },
+            { "seealso",        (p) => p.documentation.SeeAlsos.Add(ParseTag(p, CodeDocumentationElementType.SeeAlso)) },
+            { "skip",           (p) => p.documentation.Skip = true },
 
-            { "para",         (p) => ParseTag(p, CodeDocumentationElementType.Para) },
-            { "paramref",     (p) => ParseTag(p, CodeDocumentationElementType.Paramref) },
-            { "typeparamref", (p) => ParseTag(p, CodeDocumentationElementType.Typeparamref) },
-            { "c",            (p) => ParseTag(p, CodeDocumentationElementType.C) },
-            { "code",         (p) => ParseTag(p, CodeDocumentationElementType.Code) },
-            { "value",        (p) => ParseTag(p, CodeDocumentationElementType.Value) },
-            { "see",          (p) => ParseTag(p, CodeDocumentationElementType.See) },
+            { "para",           (p) => ParseTag(p, CodeDocumentationElementType.Para) },
+            { "paramref",       (p) => ParseTag(p, CodeDocumentationElementType.Paramref) },
+            { "typeparamref",   (p) => ParseTag(p, CodeDocumentationElementType.Typeparamref) },
+            { "c",              (p) => ParseTag(p, CodeDocumentationElementType.C) },
+            { "code",           (p) => ParseTag(p, CodeDocumentationElementType.Code) },
+            { "value",          (p) => ParseTag(p, CodeDocumentationElementType.Value) },
+            { "see",            (p) => ParseTag(p, CodeDocumentationElementType.See) },
 
 
-            { "list",        (p) => ParseTag(p, CodeDocumentationElementType.List) },
-            { "listheader",  (p) => ParseTag(p, CodeDocumentationElementType.ListHeader) },
-            { "item",        (p) => ParseTag(p, CodeDocumentationElementType.Item) },
-            { "term",        (p) => ParseTag(p, CodeDocumentationElementType.Term) },
-            { "description", (p) => ParseTag(p, CodeDocumentationElementType.Description) },
+            { "list",           (p) => ParseTag(p, CodeDocumentationElementType.List) },
+            { "listheader",     (p) => ParseTag(p, CodeDocumentationElementType.ListHeader) },
+            { "item",           (p) => ParseTag(p, CodeDocumentationElementType.Item) },
+            { "term",           (p) => ParseTag(p, CodeDocumentationElementType.Term) },
+            { "description",    (p) => ParseTag(p, CodeDocumentationElementType.Description) },
         };
 
 
@@ -57,12 +58,12 @@ namespace Documentation.Models.CodeElements.Documentation
                 switch (elementAttribute)
                 {
                     case XmlCrefAttributeSyntax crefAttribute:
-                        var crefSymbol = parameters.semanticModel.GetSymbolInfo(crefAttribute.Cref).Symbol?.ToString();
+                        var crefSymbol = parameters.semanticModel.GetSymbolInfo(crefAttribute.Cref).Symbol;
 
                         if (crefSymbol == null)
                             continue;
 
-                        var declaration = new TypeKind.CodeRegularDeclaration(crefSymbol, crefSymbol);
+                        var declaration = parameters.references.GetTypeDeclaration(crefSymbol, parameters.semanticModel);
                         documentationElement.Attributes.Add("cref", declaration);
                         parameters.references.AddDeclarationToQueue(declaration);
                         break;
@@ -126,7 +127,7 @@ namespace Documentation.Models.CodeElements.Documentation
             CodeDocumentation codeDocumentation = new CodeDocumentation();
 
             foreach (var xmlElement in xmlElements)
-                if (RunAction.TryGetValue(xmlElement.StartTag.Name.ToString(), out actionForTag))
+                if (!codeDocumentation.Skip && RunAction.TryGetValue(xmlElement.StartTag.Name.ToString(), out actionForTag))
                     actionForTag(new ActionParams(references, semanticModel, codeDocumentation, xmlElement, xmlElement.StartTag.Attributes, null));
 
             if (codeDocumentation.Parameters.Count != 0)

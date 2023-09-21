@@ -1,6 +1,5 @@
 ﻿using Documentation.Models.CodeElements;
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
 
 namespace Documentation.Models
 {
@@ -40,13 +39,6 @@ namespace Documentation.Models
                     { CodeElementType.Record, false },
                     { CodeElementType.Enum, false },
                     { CodeElementType.Delegate, false },
-                    { CodeElementType.Method, false },
-                    { CodeElementType.Constructor, false },
-                    { CodeElementType.Destructor, false },
-                    { CodeElementType.Operator, false },
-                    { CodeElementType.Property, false },
-                    { CodeElementType.Variable, false },
-
                 },
             };
         }

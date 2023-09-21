@@ -11,7 +11,7 @@ namespace Documentation.Models.CodeElements.Documentation
         public List<CodeDocumentationElement> Exceptions { get; set; }
         public List<CodeDocumentationElement> Examples { get; set; }
         public List<CodeDocumentationElement> SeeAlsos { get; set; }
-
+        public bool Skip { get; set; }
 
         public CodeDocumentation()
         {
@@ -19,6 +19,7 @@ namespace Documentation.Models.CodeElements.Documentation
             Exceptions = new List<CodeDocumentationElement>();
             Examples = new List<CodeDocumentationElement>();
             SeeAlsos = new List<CodeDocumentationElement>();
+            Skip = false;
         }
     }
 }

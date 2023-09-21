@@ -9,7 +9,7 @@ namespace Documentation.Common
     {
         public override Dictionary<CodeElementType, bool> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if(reader.TokenType != JsonTokenType.StartObject) throw new JsonException();
+            if (reader.TokenType != JsonTokenType.StartObject) throw new JsonException();
 
             var result = new Dictionary<CodeElementType, bool>();
             var converter = (JsonConverter<bool>)options.GetConverter(typeof(bool));
@@ -26,7 +26,7 @@ namespace Documentation.Common
 
                 if (!Enum.TryParse(propertyName, out CodeElementType key))
                     throw new JsonException($"Unable to convert \"{propertyName}\" to Enum.");
-                
+
 
                 reader.Read();
                 var value = converter.Read(ref reader, typeof(bool), options)!;
@@ -39,7 +39,7 @@ namespace Documentation.Common
 
         public override void Write(Utf8JsonWriter writer, Dictionary<CodeElementType, bool> value, JsonSerializerOptions options)
         {
-            foreach(var typeSetup in value)
+            foreach (var typeSetup in value)
             {
                 writer.WritePropertyName(typeSetup.Key.ToString());
                 writer.WriteStartObject();

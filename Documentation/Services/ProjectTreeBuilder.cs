@@ -18,7 +18,7 @@ namespace Documentation.Services
     internal static class ProjectTreeBuilder
     {
         private record SyntaxActionStaticParams(DocsInfo docsInfo, ProjectStructureTree projetStructureTree, ReferenceBuilder references);
-        private record SyntaxActionParams(SemanticModel semanticModel, ProjectStructureTreeNode currentNode, SyntaxNode codeElement, IParentType parentReference);
+        private record SyntaxActionParams(SemanticModel semanticModel, ProjectStructureTreeNode currentNode, SyntaxNode codeElement, IParentType parentReference, CodeDocumentation documentation);
         private delegate void SyntaxElementAction(SyntaxActionStaticParams sp, SyntaxActionParams p);
 
         private static readonly Dictionary<SyntaxKind, SyntaxElementAction> syntaxElementFunctions = new Dictionary<SyntaxKind, SyntaxElementAction>()
@@ -35,15 +35,15 @@ namespace Documentation.Services
                 { SyntaxKind.RecordDeclaration, AnalyzeRecordDeclaration },
                 { SyntaxKind.EnumDeclaration, AnalyzeEnumDeclaration },
 
-                //------Type Members------
-                //Type Method Members
+                // ------Type Members------
+                // Type Method Members
                 { SyntaxKind.MethodDeclaration, AnalyzeMethodDeclaration },
                 { SyntaxKind.ConstructorDeclaration, AnalyzeContructorDeclaration },
                 { SyntaxKind.DestructorDeclaration, AnalyzeDestructorDeclaration },
                 { SyntaxKind.OperatorDeclaration, AnalyzeOperatorDeclaration },
                 { SyntaxKind.ConversionOperatorDeclaration, AnalyzeConversionOperatorDeclaration },
 
-                //Type Variable and Property Members
+                // Type Variable and Property Members
                 { SyntaxKind.FieldDeclaration, AnalyzeFieldDeclaration },
                 { SyntaxKind.PropertyDeclaration, AnalyzePropertyDeclaration }
             };
@@ -59,8 +59,15 @@ namespace Documentation.Services
         {
             List<SyntaxTree> syntaxTrees = new List<SyntaxTree>();
             foreach (var proj in docsInfo.SolutionProjects)
+            {
+                if (docsInfo.Configuration.ExcludedProjects.Contains(proj.Name))
+                    continue;
+
                 foreach (var projChild in proj.Children)
                     GetChilds(projChild);
+            }
+
+
 
 
             void GetChilds(SolutionItem item)
@@ -108,17 +115,27 @@ namespace Documentation.Services
             {
                 var kind = codeElement.Kind();
                 if (kind == SyntaxKind.FileScopedNamespaceDeclaration || kind == SyntaxKind.NamespaceDeclaration)
-                    AnalyzeNamespaceDeclaration(sp, new SyntaxActionParams(semanticModel, null, codeElement, null));
+                    AnalyzeNamespaceDeclaration(sp, new SyntaxActionParams(semanticModel, null, codeElement, null, null));
             }
         }
 
-        private static void AnalyzeMembers(SyntaxActionStaticParams sp, SyntaxActionParams p, SyntaxList<MemberDeclarationSyntax> members)
+        private static void AnalyzeMembers(SyntaxActionStaticParams sp, SemanticModel semanticModel, ProjectStructureTreeNode currentNode, IParentType parentReference, SyntaxList<MemberDeclarationSyntax> members)
         {
             SyntaxElementAction action;
 
             foreach (var member in members)
+            {
                 if (syntaxElementFunctions.TryGetValue(member.Kind(), out action))
-                    action.Invoke(sp, new SyntaxActionParams(p.semanticModel, p.currentNode, member, p.parentReference));
+                {
+                    CodeDocumentation? codeDocs = AnalyzeDocumentation(sp.references, semanticModel, member);
+
+                    if (codeDocs != null && codeDocs.Skip)
+                        continue;
+
+                    action.Invoke(sp, new SyntaxActionParams(semanticModel, currentNode, member, parentReference, codeDocs));
+                }
+            }
+
         }
 
         #endregion
@@ -136,7 +153,7 @@ namespace Documentation.Services
             if (changeNode.NamespaceReference == null)
                 changeNode.NamespaceReference = new CodeNamespace(namespaceName);
 
-            AnalyzeMembers(sp, new SyntaxActionParams(p.semanticModel, changeNode, p.codeElement, changeNode.NamespaceReference), baseNamespaceDeclaration.Members);
+            AnalyzeMembers(sp, p.semanticModel, changeNode, changeNode.NamespaceReference, baseNamespaceDeclaration.Members);
             changeNode.NamespaceReference.InternalTypes.Sort();
         }
 
@@ -153,9 +170,9 @@ namespace Documentation.Services
                 namespaceReference: p.currentNode.NamespaceReference,
                 declaration: sp.references.GetTypeDeclaration(p.codeElement, p.semanticModel, delegateDeclaration.Identifier.ValueText, delegateDeclaration.TypeParameterList?.Parameters),
                 accessModifier: delegateDeclaration.Modifiers.ToString(),
-                returnType: delegateDeclaration.ReturnType.ToString(),
+                returnType: sp.references.GetVariableDeclaration(delegateDeclaration.ReturnType, p.semanticModel),
                 parameters: delegateDeclaration.ParameterList.Parameters.Select(x => new CodeVariable(sp.references.GetVariableDeclaration(x.Type, p.semanticModel), p.currentNode.NamespaceReference, null, x.Identifier.ValueText)).ToList(),
-                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
+                documentation: p.documentation);
 
             codeDelegate.Declaration.AddReference(codeDelegate);
             p.parentReference.AddInternalElement(codeDelegate);
@@ -172,11 +189,11 @@ namespace Documentation.Services
                 type: CodeElementType.Class,
                 declaration: sp.references.GetTypeDeclaration(p.codeElement, p.semanticModel, classDeclaration.Identifier.ValueText, classDeclaration.TypeParameterList?.Parameters),
                 accessModifier: classDeclaration.Modifiers.ToString(),
-                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
+                documentation: p.documentation);
 
             codeClass.Declaration.AddReference(codeClass);
             p.parentReference.AddInternalElement(codeClass);
-            AnalyzeMembers(sp, new SyntaxActionParams(p.semanticModel, p.currentNode, p.codeElement, codeClass), classDeclaration.Members);
+            AnalyzeMembers(sp, p.semanticModel, p.currentNode, codeClass, classDeclaration.Members);
             codeClass.Members.Sort();
             sp.references.AddReference(codeClass);
         }
@@ -191,7 +208,7 @@ namespace Documentation.Services
                 type: CodeElementType.Record,
                 declaration: sp.references.GetTypeDeclaration(p.codeElement, p.semanticModel, recordDeclaration.Identifier.ValueText, recordDeclaration.TypeParameterList?.Parameters),
                 accessModifier: recordDeclaration.Modifiers.ToString(),
-                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
+                documentation: p.documentation);
 
 
             if (recordDeclaration.ParameterList != null)
@@ -201,7 +218,7 @@ namespace Documentation.Services
 
             codeRecord.Declaration.AddReference(codeRecord);
             p.parentReference.AddInternalElement(codeRecord);
-            AnalyzeMembers(sp, new SyntaxActionParams(p.semanticModel, p.currentNode, p.codeElement, codeRecord), recordDeclaration.Members);
+            AnalyzeMembers(sp, p.semanticModel, p.currentNode, codeRecord, recordDeclaration.Members);
             codeRecord.Members.Sort();
             sp.references.AddReference(codeRecord);
         }
@@ -216,12 +233,12 @@ namespace Documentation.Services
                 type: CodeElementType.Interface,
                 declaration: sp.references.GetTypeDeclaration(p.codeElement, p.semanticModel, interfaceDeclaration.Identifier.ValueText, interfaceDeclaration.TypeParameterList?.Parameters),
                 accessModifier: interfaceDeclaration.Modifiers.ToString(),
-                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
+                documentation: p.documentation);
 
 
             codeInterface.Declaration.AddReference(codeInterface);
             p.parentReference.AddInternalElement(codeInterface);
-            AnalyzeMembers(sp, new SyntaxActionParams(p.semanticModel, p.currentNode, p.codeElement, codeInterface), interfaceDeclaration.Members);
+            AnalyzeMembers(sp, p.semanticModel, p.currentNode, codeInterface, interfaceDeclaration.Members);
             codeInterface.Members.Sort();
             sp.references.AddReference(codeInterface);
         }
@@ -236,12 +253,12 @@ namespace Documentation.Services
                 type: CodeElementType.Struct,
                 declaration: sp.references.GetTypeDeclaration(p.codeElement, p.semanticModel, structDeclaration.Identifier.ValueText, structDeclaration.TypeParameterList?.Parameters),
                 accessModifier: structDeclaration.Modifiers.ToString(),
-                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
+                documentation: p.documentation);
 
 
             codeStruct.Declaration.AddReference(codeStruct);
             p.parentReference.AddInternalElement(codeStruct);
-            AnalyzeMembers(sp, new SyntaxActionParams(p.semanticModel, p.currentNode, p.codeElement, codeStruct), structDeclaration.Members);
+            AnalyzeMembers(sp, p.semanticModel, p.currentNode, codeStruct, structDeclaration.Members);
             codeStruct.Members.Sort();
             sp.references.AddReference(codeStruct);
         }
@@ -256,7 +273,7 @@ namespace Documentation.Services
                 declaration: (CodeRegularDeclaration)sp.references.GetTypeDeclaration(p.codeElement, p.semanticModel, enumDeclaration.Identifier.ValueText, null),
                 accessModifier: enumDeclaration.Modifiers.ToString(),
                 elements: new List<string>(enumDeclaration.Members.Select(x => x.Identifier.ValueText)),
-                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
+                documentation: p.documentation);
 
 
             codeEnum.Declaration.AddReference(codeEnum);
@@ -280,8 +297,15 @@ namespace Documentation.Services
             if (documentationComment == null)
                 return null;
 
-            var childNodes = documentationComment.ChildNodes().OfType<XmlElementSyntax>();
 
+            var allChildNodes = documentationComment.ChildNodes();
+
+
+            if (allChildNodes.OfType<XmlEmptyElementSyntax>().Where(x => x.Name.ToString() == "skip").Count() != 0)
+                return new CodeDocumentation() { Skip = true };
+
+
+            var childNodes = allChildNodes.OfType<XmlElementSyntax>();
             return childNodes.Count() > 0 ? CodeDocumentationBuilder.BuildDocumentation(childNodes, semanticModel, references) : null;
         }
 
@@ -300,7 +324,7 @@ namespace Documentation.Services
                 accessModifier: methodDeclaration.Modifiers.ToString(),
                 returnType: sp.references.GetVariableDeclaration(methodDeclaration.ReturnType, p.semanticModel),
                 parameters: methodDeclaration.ParameterList.Parameters.Select(x => new CodeVariable(sp.references.GetVariableDeclaration(x.Type, p.semanticModel), p.currentNode.NamespaceReference, null, x.Identifier.ValueText)).ToList(),
-                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
+                documentation: p.documentation);
 
             p.parentReference.AddInternalElement(codeMethod);
         }
@@ -315,7 +339,7 @@ namespace Documentation.Services
                 declaration: (CodeRegularDeclaration)sp.references.GetMethodDeclaration(constructorDeclaration, constructorDeclaration.Identifier.ValueText, p.semanticModel, null),
                 accessModifier: constructorDeclaration.Modifiers.ToString(),
                 parameters: constructorDeclaration.ParameterList.Parameters.Select(x => new CodeVariable(sp.references.GetVariableDeclaration(x.Type, p.semanticModel), p.currentNode.NamespaceReference, null, x.Identifier.ValueText)).ToList(),
-                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
+                documentation: p.documentation);
 
             p.parentReference.AddInternalElement(constructorMethod);
         }
@@ -328,7 +352,7 @@ namespace Documentation.Services
                 parent: p.parentReference,
                 namespaceReference: p.currentNode.NamespaceReference,
                 declaration: (CodeRegularDeclaration)sp.references.GetMethodDeclaration(destructorDeclaration, destructorDeclaration.Identifier.ValueText, p.semanticModel, null),
-                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
+                documentation: p.documentation);
 
             p.parentReference.AddInternalElement(destructorMethod);
         }
@@ -344,7 +368,7 @@ namespace Documentation.Services
                 accessModifier: operatorDeclaration.Modifiers.ToString(),
                 returnType: sp.references.GetVariableDeclaration(operatorDeclaration.ReturnType, p.semanticModel),
                 parameters: operatorDeclaration.ParameterList.Parameters.Select(x => new CodeVariable(sp.references.GetVariableDeclaration(x.Type, p.semanticModel), p.currentNode.NamespaceReference, null, x.Identifier.ValueText)).ToList(),
-                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
+                documentation: p.documentation);
 
             p.parentReference.AddInternalElement(operatorMethod);
         }
@@ -360,7 +384,7 @@ namespace Documentation.Services
                 accessModifier: conversionOperatorDeclaration.Modifiers.ToString(),
                 returnType: new CodeRegularDeclaration(string.Empty, null),
                 parameters: conversionOperatorDeclaration.ParameterList.Parameters.Select(x => new CodeVariable(sp.references.GetVariableDeclaration(x.Type, p.semanticModel), p.currentNode.NamespaceReference, null, x.Identifier.ValueText)).ToList(),
-                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
+                documentation: p.documentation);
 
             p.parentReference.AddInternalElement(conversionOperatorMethod);
         }
@@ -378,7 +402,7 @@ namespace Documentation.Services
                 declaration: sp.references.GetVariableDeclaration(fieldDeclaration.Declaration.Type, p.semanticModel),
                 accessModifier: fieldDeclaration.Modifiers.ToString(),
                 fieldName: string.Join(", ", fieldDeclaration.Declaration.Variables.Select(x => x.Identifier)),
-                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
+                documentation: p.documentation);
 
             p.parentReference.AddInternalElement(codeVariable);
         }
@@ -394,7 +418,7 @@ namespace Documentation.Services
                 accessModifier: propertyDeclaration.Modifiers.ToString(),
                 name: propertyDeclaration.Identifier.ValueText,
                 accessors: propertyDeclaration.AccessorList?.Accessors.Select(x => x.Keyword.ValueText).ToList(),
-                documentation: AnalyzeDocumentation(sp.references, p.semanticModel, p.codeElement));
+                documentation: p.documentation);
 
             p.parentReference.AddInternalElement(codeProperty);
         }

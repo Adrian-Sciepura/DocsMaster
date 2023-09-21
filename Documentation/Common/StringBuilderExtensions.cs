@@ -1,5 +1,4 @@
-﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
-using System.Text;
+﻿using System.Text;
 
 namespace Documentation.Common
 {

@@ -8,7 +8,7 @@ namespace Documentation.Models.CodeElements.Documentation
         public CodeDocumentationElementType Type { get; set; }
         public string Text { get; set; }
         public List<CodeDocumentationElement> SubElements { get; set; }
-        public Dictionary<string, CodeRegularDeclaration> Attributes { get; set; }
+        public Dictionary<string, BaseCodeDeclarationKind> Attributes { get; set; }
 
 
         public CodeDocumentationElement(CodeDocumentationElementType type)
@@ -16,7 +16,7 @@ namespace Documentation.Models.CodeElements.Documentation
             Type = type;
             Text = string.Empty;
             SubElements = new List<CodeDocumentationElement>();
-            Attributes = new Dictionary<string, CodeRegularDeclaration>();
+            Attributes = new Dictionary<string, BaseCodeDeclarationKind>();
         }
 
 

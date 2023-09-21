@@ -62,6 +62,8 @@ namespace Documentation.Models
 
         public void AddDeclarationToQueue(CodeRegularDeclaration declaration) => DeclarationsToAddReference.Enqueue(declaration);
 
+        public void AddDeclarationToQueue(BaseCodeDeclarationKind declaration) => DeclarationsToAddReference.Enqueue(declaration is CodeGenericDeclaration genericDeclaration ? genericDeclaration.MainType : declaration as CodeRegularDeclaration);
+
         public BaseCodeDeclarationKind GetMethodDeclaration(BaseMethodDeclarationSyntax methodDeclaration, string name, SemanticModel semanticModel, SeparatedSyntaxList<TypeParameterSyntax>? genericParameters)
         {
             var symbol = (IMethodSymbol)semanticModel.GetDeclaredSymbol(methodDeclaration);
@@ -93,6 +95,23 @@ namespace Documentation.Models
             CodeGenericDeclaration genericTypeDeclaration = new CodeGenericDeclaration(subTypes, new CodeRegularDeclaration(name, fullName));
 
             return genericTypeDeclaration;
+        }
+
+        public BaseCodeDeclarationKind GetTypeDeclaration(ISymbol symbol, SemanticModel semanticModel)
+        {
+            string name = symbol.Name;
+            string rawFullName = symbol.ToString();
+            string fullName;
+
+            if (symbol is INamedTypeSymbol namedType && namedType.TypeParameters.Length > 0)
+            {
+                fullName = DeclarationFullNameScraper(rawFullName, namedType.TypeParameters.Length);
+
+                List<BaseCodeDeclarationKind> subTypes = namedType.TypeParameters.Select(x => new CodeRegularDeclaration(x.Name, null)).ToList<BaseCodeDeclarationKind>();
+                return new CodeGenericDeclaration(subTypes, new CodeRegularDeclaration(name, fullName));
+            }
+
+            return new CodeRegularDeclaration(name, rawFullName);
         }
 
         public BaseCodeDeclarationKind GetVariableDeclaration(TypeSyntax typeSyntax, SemanticModel semanticModel)

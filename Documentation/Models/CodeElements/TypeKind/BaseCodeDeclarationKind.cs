@@ -10,5 +10,6 @@
         public abstract string? GetFullName();
         public abstract string? GetHash();
         public abstract void AddReference(CodeElement codeElement);
+        public abstract CodeElement GetTypeReference();
     }
 }

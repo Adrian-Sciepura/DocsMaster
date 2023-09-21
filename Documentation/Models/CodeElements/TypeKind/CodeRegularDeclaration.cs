@@ -33,5 +33,10 @@
         {
             TypeReference = codeElement;
         }
+
+        public override CodeElement GetTypeReference()
+        {
+            return TypeReference;
+        }
     }
 }
