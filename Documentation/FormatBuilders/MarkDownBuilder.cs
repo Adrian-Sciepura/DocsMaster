@@ -9,6 +9,7 @@ using Documentation.Models.CodeElements.Variables;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using static Documentation.Models.CodeElements.Documentation.CodeDocumentationElement;
@@ -19,6 +20,15 @@ namespace Documentation.FormatBuilders
     internal sealed class MarkDownBuilder : FormatBuilder
     {
         private static string _outputFolder;
+
+        private void CopyDocumentStyles()
+        {
+            using (Stream style = Assembly.GetExecutingAssembly().GetManifestResourceStream("Documentation.Resources.style.css"))
+            {
+                using (Stream output = File.OpenWrite(Path.Combine(_outputFolder, "style.css")))
+                    style.CopyTo(output);
+            }
+        }
 
         private void GetNamespacesTreeRecursive(ProjectStructureTreeNode node, ref string text, string indent, string namePath, bool last, Action<CodeNamespace> RunForEveryNamespace, Func<CodeNamespace, string> PathBuilder)
         {
@@ -79,6 +89,7 @@ namespace Documentation.FormatBuilders
             }
 
             Task.WaitAll(converterStaticParams.Tasks.ToArray());
+            CopyDocumentStyles();
         }
 
 
@@ -417,7 +428,7 @@ namespace Documentation.FormatBuilders
             if (typeSetup[codeElement.Type])
             {
                 if (codeElement.Declaration is CodeGenericDeclaration genericDeclaration)
-                    elements.Push($"x{genericDeclaration.SubTypes.Count}");
+                    elements.Push($"T{genericDeclaration.SubTypes.Count}");
 
                 elements.Push(clearFileNames.Replace(codeElement.Declaration.GetName(), string.Empty));
             }
