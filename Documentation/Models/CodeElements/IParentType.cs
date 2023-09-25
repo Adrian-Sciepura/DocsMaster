@@ -7,5 +7,6 @@
         CodeElementType GetElementType();
         IParentType? GetParent();
         bool ContainsElement(CodeElement codeElement);
+        CodeElement? GetChild(CodeElementType elementType, string name);
     }
 }

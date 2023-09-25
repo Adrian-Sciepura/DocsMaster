@@ -1,6 +1,7 @@
 ﻿using Documentation.Models.CodeElements.Documentation;
 using Documentation.Models.CodeElements.TypeKind;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Documentation.Models.CodeElements.Types
 {
@@ -33,22 +34,6 @@ namespace Documentation.Models.CodeElements.Types
 
         public CodeElementType GetElementType() => Type;
 
-        /*public override XElement ConvertToXml()
-        {
-            *//*XElement xmlType = new XElement(Type.ToString());
-            xmlType.Add(new XAttribute("name", Name));
-
-            if (AccessModifier != null)
-                xmlType.Add(new XAttribute("access", AccessModifier));
-
-            if (InternalTypes.Count > 0)
-                xmlType.Add(new XElement("internalTypes", InternalTypes.Select(x => x.ConvertToXml())));
-
-            if (Members.Count > 0)
-                xmlType.Add(new XElement("members", Members.Select(x => x.ConvertToXml())));
-
-            return xmlType;*//*
-            throw new NotImplementedException();
-        }*/
+        public CodeElement? GetChild(CodeElementType elementType, string name) => Members.Where(x => x.Type == elementType && x.Declaration.GetName() == name).FirstOrDefault();
     }
 }

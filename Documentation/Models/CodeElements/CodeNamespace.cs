@@ -1,6 +1,7 @@
 ﻿using Documentation.Models.CodeElements.TypeKind;
 using Documentation.Models.CodeElements.Types;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Documentation.Models.CodeElements
 {
@@ -33,5 +34,7 @@ namespace Documentation.Models.CodeElements
         public bool ContainsElement(CodeElement codeElement) => (codeElement is BaseCodeType internalType && InternalTypes.Contains(internalType));
 
         public CodeElementType GetElementType() => CodeElementType.Namespace;
+
+        public CodeElement? GetChild(CodeElementType elementType, string name) => InternalTypes.Where(x => x.Type == elementType && x.Declaration.GetName() == name).FirstOrDefault();
     }
 }

@@ -56,13 +56,18 @@ namespace Documentation.FormatBuilders
                 Directory.CreateDirectory(_outputFolder);
         }
 
-
         public override void Generate()
         {
             StringBuilder sb = new StringBuilder();
-            TypeSetup typeSetup = _docsInfo.Configuration.CodeElementsToGenerateInSeparateFile;
-            Action<CodeNamespace> runForEveryNamespace = namespacereference => sb.Append(ConvertToMarkdown(typeSetup, namespacereference, null, ""));
-            Func<CodeNamespace, string> pathBuilder = namespaceReference => typeSetup[CodeElementType.Namespace] ? $"{namespaceReference.Declaration.GetName()}.md#{namespaceReference.Declaration.GetHash()}" : $"#{namespaceReference.Declaration.GetHash()}";
+
+            ConverterConstParams converterStaticParams = new ConverterConstParams()
+            {
+                TypeSetup = _docsInfo.Configuration.CodeElementsToGenerateInSeparateFile,
+                Tasks = new List<Task>()
+            };
+
+            Action<CodeNamespace> runForEveryNamespace = namespacereference => sb.Append(ConvertToMarkdown(converterStaticParams, namespacereference, namespacereference, ""));
+            Func<CodeNamespace, string> pathBuilder = namespaceReference => converterStaticParams.TypeSetup[CodeElementType.Namespace] ? $"{namespaceReference.Declaration.GetName()}.md#{namespaceReference.Declaration.GetHash()}" : $"#{namespaceReference.Declaration.GetHash()}";
 
             string menu = $"{CSS_STYLE_DECLARATION}\n\n";
             GetNamespacesTreeRecursive(_solutionTree.root, ref menu, "", "", true, runForEveryNamespace, pathBuilder);
@@ -72,9 +77,14 @@ namespace Documentation.FormatBuilders
                 allInOneFile.Write(menu);
                 allInOneFile.Write(sb.ToString());
             }
+
+            Task.WaitAll(converterStaticParams.Tasks.ToArray());
         }
 
 
+
+        #region Models
+        
         private class MarkdownCodeElement
         {
             public StringBuilder Header { get; set; }
@@ -95,6 +105,16 @@ namespace Documentation.FormatBuilders
 
             }
         }
+
+        private class ConverterConstParams
+        {
+            public TypeSetup TypeSetup { get; set; }
+            public List<Task> Tasks { get; set; }
+        }
+
+        #endregion
+
+
 
         #region Const Values
 
@@ -126,9 +146,11 @@ namespace Documentation.FormatBuilders
 
         #endregion
 
+
+
         #region Converters Invoke Management
 
-        private delegate MarkdownCodeElement ActionForCodeElement(TypeSetup typeSetup, CodeElement codeElement, IParentType currentParent, string indent);
+        private delegate MarkdownCodeElement ActionForCodeElement(ConverterConstParams constParams, CodeElement codeElement, IParentType currentParent, string indent);
 
         private static readonly Dictionary<(CodeElementType elementType, bool generateInExternalFile), ActionForCodeElement> MarkdownConverters = new Dictionary<(CodeElementType elementType, bool generateInExternalFile), ActionForCodeElement>()
         {
@@ -166,6 +188,8 @@ namespace Documentation.FormatBuilders
 
         #endregion
 
+
+
         #region Documentation Invoke Management
 
         private delegate StringBuilder ActionForDocumentationElement(TypeSetup typeSetup, IParentType currentParent, CodeDocumentationElement documentationElement, string indent);
@@ -190,7 +214,10 @@ namespace Documentation.FormatBuilders
 
         #endregion
 
+
+
         #region Documentation Converters
+
 
         #region Help Functions
 
@@ -233,12 +260,13 @@ namespace Documentation.FormatBuilders
             if (defaultContent != null)
                 return new StringBuilder($"<span class=\"{TYPE_DECLARATION_SELECTOR}\"> [{defaultContent}]({ReferencePathDefault(typeSetup, typeReference, currentParent, true, true)})</a>");
 
-            return new StringBuilder(" ").Append(DeclarationDefault(typeSetup, declaration, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR));
+            return new StringBuilder(" ").Append(DeclarationDefaultConvert(typeSetup, declaration, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR));
         }
 
         #endregion
 
-        private static StringBuilder? Documentation(TypeSetup typeSetup, IParentType currentParent, CodeDocumentation? documentation, string indent)
+
+        private static StringBuilder? Documentation(ConverterConstParams constParams, IParentType currentParent, CodeDocumentation? documentation, string indent)
         {
             if (documentation == null)
                 return null;
@@ -266,8 +294,7 @@ namespace Documentation.FormatBuilders
                     return;
 
                 sb.Append($"{indent}| __{name}__ |");
-                sb.Append(invokeAction(typeSetup, currentParent, singleDocumentationElement, indent));
-                //sb.Append(indent).Append();
+                sb.Append(invokeAction(constParams.TypeSetup, currentParent, singleDocumentationElement, indent));
                 sb.Append(" |\n");
             }
 
@@ -283,7 +310,7 @@ namespace Documentation.FormatBuilders
                 sb.Append($"{indent}| __{header}__ | <ul>");
 
                 foreach (var listElement in listDocumentationElement)
-                    sb.Append(invokeAction(typeSetup, currentParent, listElement, indent));
+                    sb.Append(invokeAction(constParams.TypeSetup, currentParent, listElement, indent));
 
                 sb.Append($"</ul> |\n");
             }
@@ -369,7 +396,10 @@ namespace Documentation.FormatBuilders
 
         #endregion
 
+
+
         #region Default Converters
+
 
         #region Help functions
 
@@ -380,20 +410,33 @@ namespace Documentation.FormatBuilders
             if (!typeSetup[codeElement.Type] && currentParent != null && codeElement.Parent == currentParent)
                 return string.Empty;
 
+            CodeElement temp;
             Stack<string> elements = new Stack<string>();
-
             IParentType? parentType = codeElement.Parent;
 
             if (typeSetup[codeElement.Type])
+            {
+                if (codeElement.Declaration is CodeGenericDeclaration genericDeclaration)
+                    elements.Push($"x{genericDeclaration.SubTypes.Count}");
+
                 elements.Push(clearFileNames.Replace(codeElement.Declaration.GetName(), string.Empty));
+            }
             else
+            {
                 while (parentType != null && !typeSetup[parentType.GetElement().Type])
                     parentType = parentType.GetParent();
+            }
 
 
+            
             while (parentType != null)
             {
-                elements.Push(clearFileNames.Replace(parentType.GetElement().Declaration.GetName(), string.Empty));
+                temp = parentType.GetElement();
+
+                if (temp.Declaration is CodeGenericDeclaration genericDeclaration)
+                    elements.Push($"x{genericDeclaration.SubTypes.Count}");
+
+                elements.Push(clearFileNames.Replace(temp.Declaration.GetName(), string.Empty));
                 parentType = parentType.GetParent();
             }
 
@@ -433,7 +476,27 @@ namespace Documentation.FormatBuilders
             }
         }
 
-        private static StringBuilder DeclarationDefault(TypeSetup typeSetup, BaseCodeDeclarationKind codeDeclaration, IParentType currentParent, string mainTypeSelector, string defaultTypeSelector, bool anchorInsteadOfLinkForMainElement = false)
+        private static void AddElementWithSelector(string? element, string selector, StringBuilder stringBuilder)
+        {
+            if (element == null)
+                return;
+
+            stringBuilder.Append($"<span class=\"{selector}\">");
+            stringBuilder.Append(element);
+            stringBuilder.Append("</span>");
+        }
+
+        private static void AddElementWithSelectorAndSpace(string? element, string selector, StringBuilder stringBuilder)
+        {
+            if (element == null)
+                return;
+
+            stringBuilder.Append($"<span class=\"{selector}\">");
+            stringBuilder.Append(element);
+            stringBuilder.Append("</span> ");
+        }
+
+        private static StringBuilder DeclarationDefaultConvert(TypeSetup typeSetup, BaseCodeDeclarationKind codeDeclaration, IParentType currentParent, string mainTypeSelector, string defaultTypeSelector, bool anchorInsteadOfLinkForMainElement = false)
         {
             StringBuilder Analyze(BaseCodeDeclarationKind element, string selector, bool anchorInsteadOfLink)
             {
@@ -477,7 +540,7 @@ namespace Documentation.FormatBuilders
             return Analyze(codeDeclaration, mainTypeSelector, anchorInsteadOfLinkForMainElement);
         }
 
-        private static StringBuilder TypeHeaderDefault(BaseCodeDeclarationKind declaration, string content, string indent)
+        private static StringBuilder TypeHeaderDefaultConvert(BaseCodeDeclarationKind declaration, string content, string indent)
         {
             StringBuilder sb = new StringBuilder();
 
@@ -500,7 +563,7 @@ namespace Documentation.FormatBuilders
             foreach (CodeVariable parameter in parameters)
             {
                 AddElementWithSelectorAndSpace(parameter.AccessModifier, KEYWORD_SELECTOR, sb);
-                sb.AppendWithSpace(DeclarationDefault(typeSetup, parameter.Declaration, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_DECLARATION_SELECTOR));
+                sb.AppendWithSpace(DeclarationDefaultConvert(typeSetup, parameter.Declaration, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_DECLARATION_SELECTOR));
                 AddElementWithSelector(parameter.FieldName, METHOD_PARAMETER_NAME_SELECTOR, sb);
 
                 if (numberOfAddedCommas < parameters.Count - 1)
@@ -514,52 +577,35 @@ namespace Documentation.FormatBuilders
             return sb;
         }
 
-        private static void AddElementWithSelector(string? element, string selector, StringBuilder stringBuilder)
+        private static async Task WriteElementToFileAsync(ConverterConstParams constParams, StringBuilder codeElementContent, IParentType currentParent, CodeElement codeElement)
         {
-            if (element == null)
-                return;
+            string fileOutputPath = Path.Combine(_outputFolder, ReferencePathDefault(constParams.TypeSetup, codeElement, currentParent, true, false));
 
-            stringBuilder.Append($"<span class=\"{selector}\">");
-            stringBuilder.Append(element);
-            stringBuilder.Append("</span>");
-        }
 
-        private static void AddElementWithSelectorAndSpace(string? element, string selector, StringBuilder stringBuilder)
-        {
-            if (element == null)
-                return;
-
-            stringBuilder.Append($"<span class=\"{selector}\">");
-            stringBuilder.Append(element);
-            stringBuilder.Append("</span> ");
-        }
-
-        private static void WriteElementToFile(TypeSetup typeSetup, StringBuilder codeElementContent, IParentType currentParent, CodeElement codeElement)
-        {
             StringBuilder sb = new StringBuilder();
 
             sb.Append(CSS_STYLE_DECLARATION).Append("\n\n");
 
             CodeElement? parentElement = codeElement.Parent?.GetElement();
-            string path = parentElement != null ? ReferencePathDefault(typeSetup, parentElement, null, true, true) : "README.md";
+            string path = parentElement != null ? ReferencePathDefault(constParams.TypeSetup, parentElement, null, true, true) : "README.md";
 
             sb.Append($"### [&#x21E6; Go Back]({path})\n");
             sb.Append(codeElementContent);
-
-            using (StreamWriter elementFile = new StreamWriter(Path.Combine(_outputFolder, ReferencePathDefault(typeSetup, codeElement, currentParent, true, false))))
-                elementFile.Write(sb.ToString());
+            
+            using (StreamWriter elementFile = new StreamWriter(fileOutputPath))
+                await elementFile.WriteAsync(sb.ToString());
         }
 
-        private static StringBuilder ConvertToMarkdown(TypeSetup typeSetup, CodeElement codeElement, IParentType currentParent, string indent)
+        private static StringBuilder ConvertToMarkdown(ConverterConstParams constParams, CodeElement codeElement, IParentType currentParent, string indent)
         {
-            MarkdownCodeElement convertedElement = MarkdownConverters[(codeElement.Type, typeSetup[codeElement.Type])](typeSetup, codeElement, currentParent, indent);
+            MarkdownCodeElement convertedElement = MarkdownConverters[(codeElement.Type, constParams.TypeSetup[codeElement.Type])](constParams, codeElement, currentParent, indent);
             StringBuilder fullContent = new StringBuilder();
 
             fullContent.Append(convertedElement.Header).TryAppend(convertedElement.Documentation).TryAppend(convertedElement.Content);
 
-            if (typeSetup[codeElement.Type])
+            if (constParams.TypeSetup[codeElement.Type])
             {
-                WriteElementToFile(typeSetup, fullContent, currentParent, codeElement);
+                constParams.Tasks.Add(Task.Factory.StartNew(async () => await WriteElementToFileAsync(constParams, fullContent, currentParent, codeElement)));
                 return convertedElement.DisplayHeader ?? convertedElement.Header;
             }
 
@@ -568,7 +614,8 @@ namespace Documentation.FormatBuilders
 
         #endregion
 
-        private static MarkdownCodeElement NamespaceDefaultConvert(TypeSetup typeSetup, CodeElement codeElement, IParentType currentParent, string indent)
+
+        private static MarkdownCodeElement NamespaceDefaultConvert(ConverterConstParams constParams, CodeElement codeElement, IParentType currentParent, string indent)
         {
             CodeNamespace codeNamespace = codeElement as CodeNamespace;
             StringBuilder header = new StringBuilder();
@@ -585,22 +632,22 @@ namespace Documentation.FormatBuilders
                     content.Append($"# {ConvertCodeElementType.ConvertToPluralForm[internalType.Type]}\n\n");
                     currentCodeElementType = internalType.Type;
 
-                    if (typeSetup[internalType.Type])
+                    if (constParams.TypeSetup[internalType.Type])
                         content.Append("| Name | Description |\n| --- | --- |\n");
                 }
 
-                if (typeSetup[currentCodeElementType])
+                if (constParams.TypeSetup[currentCodeElementType])
                 {
-                    var declaration = ConvertToMarkdown(typeSetup, internalType, typeSetup[codeElement.Type] ? codeNamespace : currentParent, "");
+                    var declaration = ConvertToMarkdown(constParams, internalType, constParams.TypeSetup[codeElement.Type] ? codeNamespace : currentParent, "");
 
                     var docsDescription = internalType.Documentation?.Summary != null ?
-                        ConvertDocumentationElementToMarkdown.GetValue(CodeDocumentationElementType.Summary)?.Invoke(typeSetup, currentParent, internalType.Documentation.Summary, string.Empty).ToString() : string.Empty;
+                        ConvertDocumentationElementToMarkdown.GetValue(CodeDocumentationElementType.Summary)?.Invoke(constParams.TypeSetup, currentParent, internalType.Documentation.Summary, string.Empty).ToString() : string.Empty;
 
                     content.Append($"| {declaration} | {docsDescription} |\n");
                 }
                 else
                 {
-                    content.Append(ConvertToMarkdown(typeSetup, internalType, typeSetup[codeElement.Type] ? codeNamespace : currentParent, ""));
+                    content.Append(ConvertToMarkdown(constParams, internalType, constParams.TypeSetup[codeElement.Type] ? codeNamespace : currentParent, ""));
                     content.Append("\n\n");
                 }
             }
@@ -610,108 +657,108 @@ namespace Documentation.FormatBuilders
             return new MarkdownCodeElement(header, content, null);
         }
 
-        private static MarkdownCodeElement PropertyDefaultConvert(TypeSetup typeSetup, CodeElement codeElement, IParentType currentParent, string indent)
+        private static MarkdownCodeElement PropertyDefaultConvert(ConverterConstParams constParams, CodeElement codeElement, IParentType currentParent, string indent)
         {
             CodeProperty codeProperty = codeElement as CodeProperty;
             StringBuilder header = new StringBuilder();
 
             AddElementWithSelectorAndSpace(codeProperty.AccessModifier, KEYWORD_SELECTOR, header);
-            header.AppendWithSpace(DeclarationDefault(typeSetup, codeProperty.Declaration, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_DECLARATION_SELECTOR));
+            header.AppendWithSpace(DeclarationDefaultConvert(constParams.TypeSetup, codeProperty.Declaration, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_DECLARATION_SELECTOR));
             AddElementWithSelectorAndSpace(codeProperty.FieldName, VARIABLE_NAME_SELECTOR, header);
             header.Append($"{{ {string.Join(" ", codeProperty.Accessors.Select(x => $"<span class=\"{KEYWORD_SELECTOR}\">{x}</span>;") ?? Enumerable.Empty<string>())} }}");
 
-            StringBuilder documentation = Documentation(typeSetup, currentParent, codeElement.Documentation, indent + "  ");
+            StringBuilder documentation = Documentation(constParams, currentParent, codeElement.Documentation, indent + "  ");
             return new MarkdownCodeElement(header, null, documentation);
         }
 
-        private static MarkdownCodeElement VariableDefaultConvert(TypeSetup typeSetup, CodeElement codeElement, IParentType currentParent, string indent)
+        private static MarkdownCodeElement VariableDefaultConvert(ConverterConstParams constParams, CodeElement codeElement, IParentType currentParent, string indent)
         {
             CodeVariable codeVariable = codeElement as CodeVariable;
             StringBuilder header = new StringBuilder();
 
             AddElementWithSelectorAndSpace(codeVariable.AccessModifier, KEYWORD_SELECTOR, header);
-            header.AppendWithSpace(DeclarationDefault(typeSetup, codeVariable.Declaration, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_DECLARATION_SELECTOR));
+            header.AppendWithSpace(DeclarationDefaultConvert(constParams.TypeSetup, codeVariable.Declaration, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_DECLARATION_SELECTOR));
             AddElementWithSelector(codeVariable.FieldName, VARIABLE_NAME_SELECTOR, header);
 
-            StringBuilder documentation = Documentation(typeSetup, currentParent, codeElement.Documentation, indent + "  ");
+            StringBuilder documentation = Documentation(constParams, currentParent, codeElement.Documentation, indent + "  ");
             return new MarkdownCodeElement(header, null, documentation);
         }
 
-        private static MarkdownCodeElement ConstructorDefaultConvert(TypeSetup typeSetup, CodeElement codeElement, IParentType currentParent, string indent)
+        private static MarkdownCodeElement ConstructorDefaultConvert(ConverterConstParams constParams, CodeElement codeElement, IParentType currentParent, string indent)
         {
             CodeConstructor codeConstructor = codeElement as CodeConstructor;
             StringBuilder header = new StringBuilder();
 
             AddElementWithSelectorAndSpace(codeConstructor.AccessModifier, KEYWORD_SELECTOR, header);
-            header.Append(DeclarationDefault(typeSetup, codeConstructor.Declaration, currentParent, METHOD_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR));
-            header.Append(MethodParametersDefault(typeSetup, codeConstructor.Parameters, currentParent));
+            header.Append(DeclarationDefaultConvert(constParams.TypeSetup, codeConstructor.Declaration, currentParent, METHOD_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR));
+            header.Append(MethodParametersDefault(constParams.TypeSetup, codeConstructor.Parameters, currentParent));
 
-            StringBuilder documentation = Documentation(typeSetup, currentParent, codeElement.Documentation, indent + "  ");
+            StringBuilder documentation = Documentation(constParams, currentParent, codeElement.Documentation, indent + "  ");
             return new MarkdownCodeElement(header, null, documentation);
         }
 
-        private static MarkdownCodeElement DestructorDefaultConvert(TypeSetup typeSetup, CodeElement codeElement, IParentType currentParent, string indent)
+        private static MarkdownCodeElement DestructorDefaultConvert(ConverterConstParams constParams, CodeElement codeElement, IParentType currentParent, string indent)
         {
             CodeDestructor codeDestructor = codeElement as CodeDestructor;
             StringBuilder header = new StringBuilder();
 
             header.Append('~');
-            header.Append(DeclarationDefault(typeSetup, codeDestructor.Declaration, currentParent, METHOD_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR));
+            header.Append(DeclarationDefaultConvert(constParams.TypeSetup, codeDestructor.Declaration, currentParent, METHOD_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR));
             header.Append("()");
 
-            StringBuilder documentation = Documentation(typeSetup, currentParent, codeElement.Documentation, indent + "  ");
+            StringBuilder documentation = Documentation(constParams, currentParent, codeElement.Documentation, indent + "  ");
             return new MarkdownCodeElement(header, null, documentation);
         }
 
-        private static MarkdownCodeElement MethodDefaultConvert(TypeSetup typeSetup, CodeElement codeElement, IParentType currentParent, string indent)
+        private static MarkdownCodeElement MethodDefaultConvert(ConverterConstParams constParams, CodeElement codeElement, IParentType currentParent, string indent)
         {
             CodeMethod codeMethod = codeElement as CodeMethod;
             StringBuilder header = new StringBuilder();
 
             AddElementWithSelectorAndSpace(codeMethod.AccessModifier, KEYWORD_SELECTOR, header);
-            header.AppendWithSpace(DeclarationDefault(typeSetup, codeMethod.ReturnType, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_DECLARATION_SELECTOR));
-            header.Append(DeclarationDefault(typeSetup, codeMethod.Declaration, currentParent, METHOD_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR));
-            header.Append(MethodParametersDefault(typeSetup, codeMethod.Parameters, currentParent));
+            header.AppendWithSpace(DeclarationDefaultConvert(constParams.TypeSetup, codeMethod.ReturnType, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_DECLARATION_SELECTOR));
+            header.Append(DeclarationDefaultConvert(constParams.TypeSetup, codeMethod.Declaration, currentParent, METHOD_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR));
+            header.Append(MethodParametersDefault(constParams.TypeSetup, codeMethod.Parameters, currentParent));
 
-            StringBuilder documentation = Documentation(typeSetup, currentParent, codeElement.Documentation, indent + "  ");
+            StringBuilder documentation = Documentation(constParams, currentParent, codeElement.Documentation, indent + "  ");
             return new MarkdownCodeElement(header, null, documentation);
         }
 
-        private static MarkdownCodeElement OperatorDefaultConvert(TypeSetup typeSetup, CodeElement codeElement, IParentType currentParent, string indent)
+        private static MarkdownCodeElement OperatorDefaultConvert(ConverterConstParams constParams, CodeElement codeElement, IParentType currentParent, string indent)
         {
             CodeOperator codeOperator = codeElement as CodeOperator;
             StringBuilder header = new StringBuilder();
 
             AddElementWithSelectorAndSpace(codeOperator.AccessModifier, KEYWORD_SELECTOR, header);
-            header.TryAppend(DeclarationDefault(typeSetup, codeOperator.ReturnType, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_DECLARATION_SELECTOR));
+            header.TryAppend(DeclarationDefaultConvert(constParams.TypeSetup, codeOperator.ReturnType, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_DECLARATION_SELECTOR));
             header.AppendWithSpace("operator");
-            header.Append(DeclarationDefault(typeSetup, codeOperator.Declaration, currentParent, METHOD_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR));
-            header.Append(MethodParametersDefault(typeSetup, codeOperator.Parameters, currentParent));
+            header.Append(DeclarationDefaultConvert(constParams.TypeSetup, codeOperator.Declaration, currentParent, METHOD_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR));
+            header.Append(MethodParametersDefault(constParams.TypeSetup, codeOperator.Parameters, currentParent));
 
-            StringBuilder documentation = Documentation(typeSetup, currentParent, codeElement.Documentation, indent + "  ");
+            StringBuilder documentation = Documentation(constParams, currentParent, codeElement.Documentation, indent + "  ");
             return new MarkdownCodeElement(header, null, documentation);
         }
 
-        private static MarkdownCodeElement DelegateDefaultConvert(TypeSetup typeSetup, CodeElement codeElement, IParentType currentParent, string indent)
+        private static MarkdownCodeElement DelegateDefaultConvert(ConverterConstParams constParams, CodeElement codeElement, IParentType currentParent, string indent)
         {
             CodeDelegate codeDelegate = codeElement as CodeDelegate;
 
             StringBuilder header = new StringBuilder();
             AddElementWithSelectorAndSpace(codeDelegate.AccessModifier, KEYWORD_SELECTOR, header);
             header.AppendWithSpace($"<span class=\"{KEYWORD_SELECTOR}\">delegate</span>");
-            header.AppendWithSpace(DeclarationDefault(typeSetup, codeDelegate.ReturnType, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_DECLARATION_SELECTOR));
-            header.Append(DeclarationDefault(typeSetup, codeDelegate.Declaration, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR));
-            header.Append(MethodParametersDefault(typeSetup, codeDelegate.Parameters, currentParent));
+            header.AppendWithSpace(DeclarationDefaultConvert(constParams.TypeSetup, codeDelegate.ReturnType, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_DECLARATION_SELECTOR));
+            header.Append(DeclarationDefaultConvert(constParams.TypeSetup, codeDelegate.Declaration, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR));
+            header.Append(MethodParametersDefault(constParams.TypeSetup, codeDelegate.Parameters, currentParent));
 
-            StringBuilder h = TypeHeaderDefault(codeElement.Declaration, header.ToString(), indent);
-            StringBuilder documentation = Documentation(typeSetup, currentParent, codeElement.Documentation, indent + "  ");
+            StringBuilder h = TypeHeaderDefaultConvert(codeElement.Declaration, header.ToString(), indent);
+            StringBuilder documentation = Documentation(constParams, currentParent, codeElement.Documentation, indent + "  ");
             return new MarkdownCodeElement(h, null, documentation);
         }
 
-        private static MarkdownCodeElement EnumDefaultConvert(TypeSetup typeSetup, CodeElement codeElement, IParentType currentParent, string indent)
+        private static MarkdownCodeElement EnumDefaultConvert(ConverterConstParams constParams, CodeElement codeElement, IParentType currentParent, string indent)
         {
             CodeEnum codeEnum = codeElement as CodeEnum;
-            StringBuilder header = TypeHeaderDefault(codeEnum.Declaration, DeclarationDefault(typeSetup, codeElement.Declaration, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR).ToString(), indent);
+            StringBuilder header = TypeHeaderDefaultConvert(codeEnum.Declaration, DeclarationDefaultConvert(constParams.TypeSetup, codeElement.Declaration, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR).ToString(), indent);
             StringBuilder content = new StringBuilder();
 
             content.Append($"{indent}Elements:\n{indent}");
@@ -721,15 +768,15 @@ namespace Documentation.FormatBuilders
             else
                 content.Append($"- {TYPE_NO_CONTENT}\n");
 
-            StringBuilder documentation = Documentation(typeSetup, currentParent, codeElement.Documentation, indent + "  ");
+            StringBuilder documentation = Documentation(constParams, currentParent, codeElement.Documentation, indent + "  ");
             return new MarkdownCodeElement(header, content, documentation);
         }
 
-        private static MarkdownCodeElement TypeDefaultConvert(TypeSetup typeSetup, CodeElement codeElement, IParentType currentParent, string indent)
+        private static MarkdownCodeElement TypeDefaultConvert(ConverterConstParams constParams, CodeElement codeElement, IParentType currentParent, string indent)
         {
             CodeType codeType = codeElement as CodeType;
-            IParentType newCurrentParent = typeSetup[codeElement.Type] ? codeType : currentParent;
-            StringBuilder header = TypeHeaderDefault(codeType.Declaration, DeclarationDefault(typeSetup, codeElement.Declaration, newCurrentParent, TYPE_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR).ToString(), indent);
+            IParentType newCurrentParent = constParams.TypeSetup[codeElement.Type] ? codeType : currentParent;
+            StringBuilder header = TypeHeaderDefaultConvert(codeType.Declaration, DeclarationDefaultConvert(constParams.TypeSetup, codeElement.Declaration, newCurrentParent, TYPE_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR).ToString(), indent);
 
             string headerIndent = indent == string.Empty ? indent : indent + '\t';
             string newIndent = headerIndent + '\t';
@@ -746,7 +793,7 @@ namespace Documentation.FormatBuilders
 
                 content.Append(newIndent);
                 content.AppendWithSpace($"- <span class=\"{LIST_ELEMENT_DECLARATION_SELECTOR}\">");
-                content.Append(ConvertToMarkdown(typeSetup, member, newCurrentParent, newIndent));
+                content.Append(ConvertToMarkdown(constParams, member, newCurrentParent, newIndent));
                 content.Append($"{newIndent}  </span>\n");
             }
 
@@ -756,7 +803,7 @@ namespace Documentation.FormatBuilders
             if (codeElement.Documentation != null)
             {
                 documentation.Append($"{headerIndent}- __Documentation__\n{headerIndent}");
-                documentation.Append(Documentation(typeSetup, currentParent, codeElement.Documentation, headerIndent + "  ")).Append('\n');
+                documentation.Append(Documentation(constParams, currentParent, codeElement.Documentation, headerIndent + "  ")).Append('\n');
             }
 
             return new MarkdownCodeElement(header, content, documentation);
@@ -764,18 +811,16 @@ namespace Documentation.FormatBuilders
 
         #endregion
 
+
+
         #region Specific Converters
 
-        #region Help Functions
-
-        #endregion
-
-        private static MarkdownCodeElement TypeSpecificConvert(TypeSetup typeSetup, CodeElement codeElement, IParentType currentParent, string indent)
+        private static MarkdownCodeElement TypeSpecificConvert(ConverterConstParams constParams, CodeElement codeElement, IParentType currentParent, string indent)
         {
             CodeType codeType = codeElement as CodeType;
-            IParentType newCurrentParent = typeSetup[codeElement.Type] ? codeType : currentParent;
-            StringBuilder header = DeclarationDefault(typeSetup, codeElement.Declaration, newCurrentParent, TYPE_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR, true);
-            StringBuilder displayHeader = DeclarationDefault(typeSetup, codeElement.Declaration, newCurrentParent, TYPE_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR);
+            IParentType newCurrentParent = constParams.TypeSetup[codeElement.Type] ? codeType : currentParent;
+            StringBuilder header = DeclarationDefaultConvert(constParams.TypeSetup, codeElement.Declaration, newCurrentParent, TYPE_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR, true);
+            StringBuilder displayHeader = DeclarationDefaultConvert(constParams.TypeSetup, codeElement.Declaration, newCurrentParent, TYPE_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR);
 
             CodeElementType currentElementType = CodeElementType.None;
 
@@ -791,7 +836,7 @@ namespace Documentation.FormatBuilders
                 }
 
                 content.AppendWithSpace($"- <span class=\"{LIST_ELEMENT_DECLARATION_SELECTOR}\">");
-                content.Append(ConvertToMarkdown(typeSetup, member, newCurrentParent, indent));
+                content.Append(ConvertToMarkdown(constParams, member, newCurrentParent, indent));
                 content.Append($"  </span>\n");
             }
 
@@ -801,17 +846,17 @@ namespace Documentation.FormatBuilders
             if (codeElement.Documentation != null)
             {
                 documentation.Append($"\n- __Documentation__\n{indent}");
-                documentation.Append(Documentation(typeSetup, currentParent, codeElement.Documentation, indent + "  ")).Append('\n');
+                documentation.Append(Documentation(constParams, currentParent, codeElement.Documentation, indent + "  ")).Append('\n');
             }
 
             return new MarkdownCodeElement(header, content, documentation, displayHeader);
         }
 
-        private static MarkdownCodeElement EnumSpecificConvert(TypeSetup typeSetup, CodeElement codeElement, IParentType currentParent, string indent)
+        private static MarkdownCodeElement EnumSpecificConvert(ConverterConstParams constParams, CodeElement codeElement, IParentType currentParent, string indent)
         {
             CodeEnum codeEnum = codeElement as CodeEnum;
-            StringBuilder header = DeclarationDefault(typeSetup, codeElement.Declaration, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR, true);
-            StringBuilder displayHeader = DeclarationDefault(typeSetup, codeElement.Declaration, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR);
+            StringBuilder header = DeclarationDefaultConvert(constParams.TypeSetup, codeElement.Declaration, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR, true);
+            StringBuilder displayHeader = DeclarationDefaultConvert(constParams.TypeSetup, codeElement.Declaration, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR);
             StringBuilder content = new StringBuilder();
 
             content.Append($"\n\nElements:\n");
@@ -821,11 +866,11 @@ namespace Documentation.FormatBuilders
             else
                 content.Append($"- {TYPE_NO_CONTENT}\n");
 
-            StringBuilder documentation = Documentation(typeSetup, currentParent, codeElement.Documentation, indent + "  ");
+            StringBuilder documentation = Documentation(constParams, currentParent, codeElement.Documentation, indent + "  ");
             return new MarkdownCodeElement(header, content, documentation, displayHeader);
         }
 
-        private static MarkdownCodeElement DelegateSpecificConvert(TypeSetup typeSetup, CodeElement codeElement, IParentType currentParent, string indent)
+        private static MarkdownCodeElement DelegateSpecificConvert(ConverterConstParams constParams, CodeElement codeElement, IParentType currentParent, string indent)
         {
             CodeDelegate codeDelegate = codeElement as CodeDelegate;
 
@@ -836,18 +881,18 @@ namespace Documentation.FormatBuilders
 
             header.AppendWithSpace($"<span class=\"{KEYWORD_SELECTOR}\">delegate</span>");
 
-            var returnType = DeclarationDefault(typeSetup, codeDelegate.ReturnType, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_DECLARATION_SELECTOR);
+            var returnType = DeclarationDefaultConvert(constParams.TypeSetup, codeDelegate.ReturnType, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_DECLARATION_SELECTOR);
             header.AppendWithSpace(returnType);
             displayHeader.AppendWithSpace(returnType);
 
-            header.Append(DeclarationDefault(typeSetup, codeDelegate.Declaration, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR));
-            displayHeader.Append(DeclarationDefault(typeSetup, codeDelegate.Declaration, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR));
+            header.Append(DeclarationDefaultConvert(constParams.TypeSetup, codeDelegate.Declaration, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR));
+            displayHeader.Append(DeclarationDefaultConvert(constParams.TypeSetup, codeDelegate.Declaration, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_PARAMETER_SELECTOR));
 
-            var parameters = MethodParametersDefault(typeSetup, codeDelegate.Parameters, currentParent);
+            var parameters = MethodParametersDefault(constParams.TypeSetup, codeDelegate.Parameters, currentParent);
             header.Append(parameters);
             displayHeader.Append(parameters);
 
-            StringBuilder documentation = Documentation(typeSetup, currentParent, codeElement.Documentation, indent + "  ");
+            StringBuilder documentation = Documentation(constParams, currentParent, codeElement.Documentation, indent + "  ");
             return new MarkdownCodeElement(header, null, documentation, displayHeader);
         }
 
