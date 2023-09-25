@@ -182,14 +182,28 @@ namespace Documentation.Services
         private static void AnalyzeClassDeclaration(SyntaxActionStaticParams sp, SyntaxActionParams p)
         {
             ClassDeclarationSyntax classDeclaration = p.codeElement as ClassDeclarationSyntax;
+            BaseCodeDeclarationKind declaration = sp.references.GetTypeDeclaration(p.codeElement, p.semanticModel, classDeclaration.Identifier.ValueText, classDeclaration.TypeParameterList?.Parameters);
+
+            if (classDeclaration.Modifiers.Any(x => x.IsKind(SyntaxKind.PartialKeyword)) && p.parentReference != null)
+            {
+                CodeType partialClass = (CodeType)p.parentReference.GetChild(CodeElementType.Class, declaration.GetName());
+                
+                if(partialClass != null)
+                {
+                    AnalyzeMembers(sp, p.semanticModel, p.currentNode, partialClass, classDeclaration.Members);
+                    partialClass.Members.Sort();
+                    return;
+                }
+            }
 
             CodeType codeClass = new CodeType(
                 parent: p.parentReference,
                 namespaceReference: p.currentNode.NamespaceReference,
                 type: CodeElementType.Class,
-                declaration: sp.references.GetTypeDeclaration(p.codeElement, p.semanticModel, classDeclaration.Identifier.ValueText, classDeclaration.TypeParameterList?.Parameters),
+                declaration: declaration,
                 accessModifier: classDeclaration.Modifiers.ToString(),
                 documentation: p.documentation);
+
 
             codeClass.Declaration.AddReference(codeClass);
             p.parentReference.AddInternalElement(codeClass);
