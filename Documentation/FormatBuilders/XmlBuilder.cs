@@ -6,9 +6,10 @@ using Documentation.Models.CodeElements.Types;
 using Documentation.Models.CodeElements.Variables;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Xml.Linq;
-using TypeSetup = System.Collections.Generic.Dictionary<Documentation.Models.CodeElements.CodeElementType, bool>;
+using VSLangProj80;
 
 namespace Documentation.FormatBuilders
 {
@@ -49,6 +50,8 @@ namespace Documentation.FormatBuilders
             docsFile.Save(Path.Combine(_outputFolder, "docs.xml"));
         }
 
+
+
         #region Converters Invoke Management
 
         private delegate XElement ActionForCodeElement(CodeElement codeElement);
@@ -78,7 +81,9 @@ namespace Documentation.FormatBuilders
         #endregion
 
 
+
         #region Converters
+
 
         #region Help Functions
 
@@ -149,7 +154,7 @@ namespace Documentation.FormatBuilders
             return modifiers;
         }
         
-        private static XElement MathodParamsConvert(List<CodeVariable> methodParameters)
+        private static XElement MathodParamsConvert(List<CodeField> methodParameters)
         {
             XElement parameters = new XElement("parameters");
 
@@ -182,28 +187,37 @@ namespace Documentation.FormatBuilders
             CodeProperty codeProperty = codeElement as CodeProperty;
             XElement propertyElement = new XElement("property");
 
-            propertyElement.Add(DeclarationConvert(codeProperty.Declaration, "name"));
             propertyElement.Add(DeclarationConvert(codeProperty.Declaration, "type"));
             propertyElement.Add(ModifiersConvert(codeElement));
 
+            XElement variables = new XElement("variables", new XElement("variable", codeProperty.VariableNames.FirstOrDefault()));
             XElement accessors = new XElement("accessors");
 
             foreach(var accessor in codeProperty.Accessors)
                 accessors.Add(new XElement("accessor", accessor));
 
+            propertyElement.Add(variables);
+            propertyElement.Add(accessors);
             return propertyElement;
         }
 
         private static XElement VariableConvert(CodeElement codeElement)
         {
-            CodeVariable codeVariable = codeElement as CodeVariable;
-            XElement variableElement = new XElement("variable");
+            CodeField codeField = codeElement as CodeField;
+            XElement fieldElement = new XElement("field");
 
-            variableElement.Add(new XAttribute("name", codeVariable.FieldName));
-            variableElement.Add(DeclarationConvert(codeVariable.Declaration, "type"));
-            variableElement.Add(ModifiersConvert(codeElement));
+            fieldElement.Add(DeclarationConvert(codeField.Declaration, "type"));
+            fieldElement.Add(ModifiersConvert(codeElement));
 
-            return variableElement;
+
+            XElement variables = new XElement("variables");
+
+            foreach (var variableName in codeField.VariableNames)
+                variables.Add(new XElement("variable", variableName));
+
+            fieldElement.Add(variables);
+            
+            return fieldElement;
         }
 
         private static XElement ConstructorConvert(CodeElement codeElement)
@@ -280,6 +294,7 @@ namespace Documentation.FormatBuilders
             
             return enumElement;
         }
+
         private static XElement TypeConvert(CodeElement codeElement)
         {
             CodeType codeType = codeElement as CodeType;

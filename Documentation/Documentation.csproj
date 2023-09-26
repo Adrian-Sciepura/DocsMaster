@@ -79,7 +79,7 @@
     <Compile Include="Models\CodeElements\CodeNamespace.cs" />
     <Compile Include="Models\CodeElements\Variables\CodeProperty.cs" />
     <Compile Include="Models\CodeElements\Types\CodeType.cs" />
-    <Compile Include="Models\CodeElements\Variables\CodeVariable.cs" />
+    <Compile Include="Models\CodeElements\Variables\CodeField.cs" />
     <Compile Include="Models\CodeElements\Enums.cs" />
     <Compile Include="Models\Configuration\DocsConfiguration.cs" />
     <Compile Include="Models\Configuration\DocsInfo.cs" />

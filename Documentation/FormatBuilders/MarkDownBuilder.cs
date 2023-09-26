@@ -564,18 +564,18 @@ namespace Documentation.FormatBuilders
             return sb;
         }
 
-        private static StringBuilder MethodParametersDefault(TypeSetup typeSetup, List<CodeVariable> parameters, IParentType currentParent)
+        private static StringBuilder MethodParametersDefault(TypeSetup typeSetup, List<CodeField> parameters, IParentType currentParent)
         {
             StringBuilder sb = new StringBuilder();
 
             sb.Append('(');
             int numberOfAddedCommas = 0;
 
-            foreach (CodeVariable parameter in parameters)
+            foreach (CodeField parameter in parameters)
             {
                 AddElementWithSelectorAndSpace(parameter.AccessModifier, KEYWORD_SELECTOR, sb);
                 sb.AppendWithSpace(DeclarationDefaultConvert(typeSetup, parameter.Declaration, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_DECLARATION_SELECTOR));
-                AddElementWithSelector(parameter.FieldName, METHOD_PARAMETER_NAME_SELECTOR, sb);
+                AddElementWithSelector(string.Join(", ", parameter.VariableNames), METHOD_PARAMETER_NAME_SELECTOR, sb);
 
                 if (numberOfAddedCommas < parameters.Count - 1)
                 {
@@ -675,7 +675,7 @@ namespace Documentation.FormatBuilders
 
             AddElementWithSelectorAndSpace(codeProperty.AccessModifier, KEYWORD_SELECTOR, header);
             header.AppendWithSpace(DeclarationDefaultConvert(constParams.TypeSetup, codeProperty.Declaration, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_DECLARATION_SELECTOR));
-            AddElementWithSelectorAndSpace(codeProperty.FieldName, VARIABLE_NAME_SELECTOR, header);
+            AddElementWithSelectorAndSpace(codeProperty.VariableNames.FirstOrDefault(), VARIABLE_NAME_SELECTOR, header);
             header.Append($"{{ {string.Join(" ", codeProperty.Accessors.Select(x => $"<span class=\"{KEYWORD_SELECTOR}\">{x}</span>;") ?? Enumerable.Empty<string>())} }}");
 
             StringBuilder documentation = Documentation(constParams, currentParent, codeElement.Documentation, indent + "  ");
@@ -684,12 +684,12 @@ namespace Documentation.FormatBuilders
 
         private static MarkdownCodeElement VariableDefaultConvert(ConverterConstParams constParams, CodeElement codeElement, IParentType currentParent, string indent)
         {
-            CodeVariable codeVariable = codeElement as CodeVariable;
+            CodeField codeField = codeElement as CodeField;
             StringBuilder header = new StringBuilder();
 
-            AddElementWithSelectorAndSpace(codeVariable.AccessModifier, KEYWORD_SELECTOR, header);
-            header.AppendWithSpace(DeclarationDefaultConvert(constParams.TypeSetup, codeVariable.Declaration, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_DECLARATION_SELECTOR));
-            AddElementWithSelector(codeVariable.FieldName, VARIABLE_NAME_SELECTOR, header);
+            AddElementWithSelectorAndSpace(codeField.AccessModifier, KEYWORD_SELECTOR, header);
+            header.AppendWithSpace(DeclarationDefaultConvert(constParams.TypeSetup, codeField.Declaration, currentParent, TYPE_DECLARATION_SELECTOR, TYPE_DECLARATION_SELECTOR));
+            AddElementWithSelector(string.Join(", ", codeField.VariableNames), VARIABLE_NAME_SELECTOR, header);
 
             StringBuilder documentation = Documentation(constParams, currentParent, codeElement.Documentation, indent + "  ");
             return new MarkdownCodeElement(header, null, documentation);

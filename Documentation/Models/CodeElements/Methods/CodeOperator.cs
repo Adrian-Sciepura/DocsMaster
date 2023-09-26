@@ -7,14 +7,14 @@ namespace Documentation.Models.CodeElements.Methods
 {
     internal class CodeOperator : BaseCodeMethod
     {
-        public List<CodeVariable> Parameters { get; set; }
+        public List<CodeField> Parameters { get; set; }
         public BaseCodeDeclarationKind ReturnType { get; set; }
 
-        public CodeOperator(CodeRegularDeclaration declaration, CodeNamespace namespaceReference, IParentType parent, string accessModifier, BaseCodeDeclarationKind returnType, List<CodeVariable>? parameters = null, CodeDocumentation documentation = null) :
+        public CodeOperator(CodeRegularDeclaration declaration, CodeNamespace namespaceReference, IParentType parent, string accessModifier, BaseCodeDeclarationKind returnType, List<CodeField>? parameters = null, CodeDocumentation documentation = null) :
             base(CodeElementType.Operator, declaration, namespaceReference, parent, accessModifier, documentation)
         {
             ReturnType = returnType;
-            Parameters = parameters ?? new List<CodeVariable>();
+            Parameters = parameters ?? new List<CodeField>();
         }
     }
 }

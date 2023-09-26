@@ -187,7 +187,7 @@ namespace Documentation.Services
                 declaration: cp.references.GetTypeDeclaration(p.codeElement, p.semanticModel, delegateDeclaration.Identifier.ValueText, delegateDeclaration.TypeParameterList?.Parameters),
                 accessModifier: delegateDeclaration.Modifiers.ToString(),
                 returnType: cp.references.GetVariableDeclaration(delegateDeclaration.ReturnType, p.semanticModel),
-                parameters: delegateDeclaration.ParameterList.Parameters.Select(x => new CodeVariable(cp.references.GetVariableDeclaration(x.Type, p.semanticModel), p.currentNode.NamespaceReference, null, x.Identifier.ValueText)).ToList(),
+                parameters: delegateDeclaration.ParameterList.Parameters.Select(x => new CodeField(cp.references.GetVariableDeclaration(x.Type, p.semanticModel), p.currentNode.NamespaceReference, null, x.Identifier.ValueText)).ToList(),
                 documentation: p.documentation);
 
             codeDelegate.Declaration.AddReference(codeDelegate);
@@ -243,7 +243,7 @@ namespace Documentation.Services
 
             if (recordDeclaration.ParameterList != null)
                 foreach (var variable in recordDeclaration.ParameterList.Parameters)
-                    codeRecord.Members.Add(new CodeVariable(cp.references.GetVariableDeclaration(variable.Type, p.semanticModel), p.currentNode.NamespaceReference, null, variable.Identifier.ValueText));
+                    codeRecord.Members.Add(new CodeField(cp.references.GetVariableDeclaration(variable.Type, p.semanticModel), p.currentNode.NamespaceReference, null, variable.Identifier.ValueText));
 
 
             codeRecord.Declaration.AddReference(codeRecord);
@@ -357,7 +357,7 @@ namespace Documentation.Services
                 declaration: cp.references.GetMethodDeclaration(methodDeclaration, methodDeclaration.Identifier.ValueText, p.semanticModel, methodDeclaration.TypeParameterList?.Parameters),
                 accessModifier: methodDeclaration.Modifiers.ToString(),
                 returnType: cp.references.GetVariableDeclaration(methodDeclaration.ReturnType, p.semanticModel),
-                parameters: methodDeclaration.ParameterList.Parameters.Select(x => new CodeVariable(cp.references.GetVariableDeclaration(x.Type, p.semanticModel), p.currentNode.NamespaceReference, null, x.Identifier.ValueText)).ToList(),
+                parameters: methodDeclaration.ParameterList.Parameters.Select(x => new CodeField(cp.references.GetVariableDeclaration(x.Type, p.semanticModel), p.currentNode.NamespaceReference, null, x.Identifier.ValueText)).ToList(),
                 documentation: p.documentation);
 
             p.parentReference.AddInternalElement(codeMethod);
@@ -372,7 +372,7 @@ namespace Documentation.Services
                 namespaceReference: p.currentNode.NamespaceReference,
                 declaration: (CodeRegularDeclaration)cp.references.GetMethodDeclaration(constructorDeclaration, constructorDeclaration.Identifier.ValueText, p.semanticModel, null),
                 accessModifier: constructorDeclaration.Modifiers.ToString(),
-                parameters: constructorDeclaration.ParameterList.Parameters.Select(x => new CodeVariable(cp.references.GetVariableDeclaration(x.Type, p.semanticModel), p.currentNode.NamespaceReference, null, x.Identifier.ValueText)).ToList(),
+                parameters: constructorDeclaration.ParameterList.Parameters.Select(x => new CodeField(cp.references.GetVariableDeclaration(x.Type, p.semanticModel), p.currentNode.NamespaceReference, null, x.Identifier.ValueText)).ToList(),
                 documentation: p.documentation);
 
             p.parentReference.AddInternalElement(constructorMethod);
@@ -401,7 +401,7 @@ namespace Documentation.Services
                 declaration: (CodeRegularDeclaration)cp.references.GetMethodDeclaration(operatorDeclaration, operatorDeclaration.OperatorToken.ValueText, p.semanticModel, null),
                 accessModifier: operatorDeclaration.Modifiers.ToString(),
                 returnType: cp.references.GetVariableDeclaration(operatorDeclaration.ReturnType, p.semanticModel),
-                parameters: operatorDeclaration.ParameterList.Parameters.Select(x => new CodeVariable(cp.references.GetVariableDeclaration(x.Type, p.semanticModel), p.currentNode.NamespaceReference, null, x.Identifier.ValueText)).ToList(),
+                parameters: operatorDeclaration.ParameterList.Parameters.Select(x => new CodeField(cp.references.GetVariableDeclaration(x.Type, p.semanticModel), p.currentNode.NamespaceReference, null, x.Identifier.ValueText)).ToList(),
                 documentation: p.documentation);
 
             p.parentReference.AddInternalElement(operatorMethod);
@@ -417,7 +417,7 @@ namespace Documentation.Services
                 declaration: (CodeRegularDeclaration)cp.references.GetMethodDeclaration(conversionOperatorDeclaration, conversionOperatorDeclaration.Type.ToString(), p.semanticModel, null),
                 accessModifier: conversionOperatorDeclaration.Modifiers.ToString(),
                 returnType: new CodeRegularDeclaration(string.Empty, null),
-                parameters: conversionOperatorDeclaration.ParameterList.Parameters.Select(x => new CodeVariable(cp.references.GetVariableDeclaration(x.Type, p.semanticModel), p.currentNode.NamespaceReference, null, x.Identifier.ValueText)).ToList(),
+                parameters: conversionOperatorDeclaration.ParameterList.Parameters.Select(x => new CodeField(cp.references.GetVariableDeclaration(x.Type, p.semanticModel), p.currentNode.NamespaceReference, null, x.Identifier.ValueText)).ToList(),
                 documentation: p.documentation);
 
             p.parentReference.AddInternalElement(conversionOperatorMethod);
@@ -432,12 +432,12 @@ namespace Documentation.Services
         {
             FieldDeclarationSyntax fieldDeclaration = p.codeElement as FieldDeclarationSyntax;
 
-            CodeVariable codeVariable = new CodeVariable(
+            CodeField codeVariable = new CodeField(
                 parent: p.parentReference,
                 namespaceReference: p.currentNode.NamespaceReference,
                 declaration: cp.references.GetVariableDeclaration(fieldDeclaration.Declaration.Type, p.semanticModel),
                 accessModifier: fieldDeclaration.Modifiers.ToString(),
-                fieldName: string.Join(", ", fieldDeclaration.Declaration.Variables.Select(x => x.Identifier)),
+                variableNames: fieldDeclaration.Declaration.Variables.Select(x => x.Identifier.ToString()).ToList(),
                 documentation: p.documentation);
 
             p.parentReference.AddInternalElement(codeVariable);

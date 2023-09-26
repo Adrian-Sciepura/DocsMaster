@@ -7,14 +7,14 @@ namespace Documentation.Models.CodeElements.Types
 {
     internal class CodeDelegate : BaseCodeType
     {
-        public List<CodeVariable> Parameters { get; set; }
+        public List<CodeField> Parameters { get; set; }
         public BaseCodeDeclarationKind ReturnType { get; set; }
 
-        public CodeDelegate(BaseCodeDeclarationKind declaration, BaseCodeDeclarationKind returnType, CodeNamespace namespaceReference, List<CodeVariable>? parameters = null, IParentType? parent = null, string? accessModifier = null, CodeDocumentation documentation = null) :
+        public CodeDelegate(BaseCodeDeclarationKind declaration, BaseCodeDeclarationKind returnType, CodeNamespace namespaceReference, List<CodeField>? parameters = null, IParentType? parent = null, string? accessModifier = null, CodeDocumentation documentation = null) :
             base(CodeElementType.Delegate, declaration, namespaceReference, parent, accessModifier, documentation)
         {
             ReturnType = returnType;
-            Parameters = parameters ?? new List<CodeVariable>();
+            Parameters = parameters ?? new List<CodeField>();
         }
     }
 }
