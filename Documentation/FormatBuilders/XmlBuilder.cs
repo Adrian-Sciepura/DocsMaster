@@ -7,6 +7,7 @@ using Documentation.Models.CodeElements.Variables;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Xml.Linq;
 
@@ -15,6 +16,15 @@ namespace Documentation.FormatBuilders
     internal class XmlBuilder : FormatBuilder
     {
         private static string _outputFolder;
+
+        private void CopyXmlSchema()
+        {
+            using (Stream style = Assembly.GetExecutingAssembly().GetManifestResourceStream("Documentation.Resources.schema.xsd"))
+            {
+                using (Stream output = File.OpenWrite(Path.Combine(_outputFolder, "schema.xsd")))
+                    style.CopyTo(output);
+            }
+        }
 
         private static void RunForEveryNamespace(ProjectStructureTreeNode node, XElement parentElement)
         {
@@ -51,6 +61,8 @@ namespace Documentation.FormatBuilders
 
             XDocument docsFile = new XDocument(root);
             docsFile.Save(Path.Combine(_outputFolder, "docs.xml"));
+
+            CopyXmlSchema();
         }
 
 
