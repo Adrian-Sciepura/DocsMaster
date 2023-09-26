@@ -9,7 +9,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Xml.Linq;
-using VSLangProj80;
 
 namespace Documentation.FormatBuilders
 {
@@ -43,6 +42,10 @@ namespace Documentation.FormatBuilders
         public override void Generate()
         {
             XElement root = new XElement("documentation");
+            XNamespace xsi = "http://www.w3.org/2001/XMLSchema-instance";
+
+            root.Add(new XAttribute(XNamespace.Xmlns + "xsi", xsi));
+            root.Add(new XAttribute(xsi + "noNamespaceSchemaLocation", "schema.xsd"));
 
             RunForEveryNamespace(_solutionTree.root, root);
 
@@ -139,12 +142,12 @@ namespace Documentation.FormatBuilders
             return new XElement("declaration", ConvertSingleElement(declaration), new XAttribute("type", declarationType), new XAttribute("name", fullName.ToString()));
         }
 
-        private static XElement ModifiersConvert(CodeElement codeElement)
+        private static XElement? ModifiersConvert(CodeElement codeElement)
         {
-            XElement modifiers = new XElement("modifiers");
+            if(codeElement.AccessModifier == null || codeElement.AccessModifier.Trim() == string.Empty)
+                return null;
 
-            if(codeElement.AccessModifier == null)
-                return modifiers;
+            XElement modifiers = new XElement("modifiers");
 
             string[] modifierList = codeElement.AccessModifier.Split(' ');
 
@@ -154,8 +157,11 @@ namespace Documentation.FormatBuilders
             return modifiers;
         }
         
-        private static XElement MathodParamsConvert(List<CodeField> methodParameters)
+        private static XElement? MathodParamsConvert(List<CodeField> methodParameters)
         {
+            if (methodParameters.Count == 0)
+                return null;
+
             XElement parameters = new XElement("parameters");
 
             foreach(var parameter in methodParameters)
@@ -173,12 +179,16 @@ namespace Documentation.FormatBuilders
 
             namespaceElement.Add(DeclarationConvert(codeNamespace.Declaration, "name"));
             
-            XElement members = new XElement("members");
+            if(codeNamespace.InternalTypes.Count > 0)
+            {
+                XElement members = new XElement("members");
 
-            foreach (var member in codeNamespace.InternalTypes)
-                members.Add(ConvertToXml(member));
+                foreach (var member in codeNamespace.InternalTypes)
+                    members.Add(ConvertToXml(member));
 
-            namespaceElement.Add(members);
+                namespaceElement.Add(members);
+            }
+
             return namespaceElement;
         }
 
@@ -188,7 +198,10 @@ namespace Documentation.FormatBuilders
             XElement propertyElement = new XElement("property");
 
             propertyElement.Add(DeclarationConvert(codeProperty.Declaration, "type"));
-            propertyElement.Add(ModifiersConvert(codeElement));
+
+            XElement modifiers = ModifiersConvert(codeElement);
+            if (modifiers != null)
+                propertyElement.Add(modifiers);
 
             XElement variables = new XElement("variables", new XElement("variable", codeProperty.VariableNames.FirstOrDefault()));
             XElement accessors = new XElement("accessors");
@@ -207,8 +220,10 @@ namespace Documentation.FormatBuilders
             XElement fieldElement = new XElement("field");
 
             fieldElement.Add(DeclarationConvert(codeField.Declaration, "type"));
-            fieldElement.Add(ModifiersConvert(codeElement));
 
+            XElement modifiers = ModifiersConvert(codeElement);
+            if (modifiers != null)
+                fieldElement.Add(modifiers);
 
             XElement variables = new XElement("variables");
 
@@ -226,8 +241,14 @@ namespace Documentation.FormatBuilders
             XElement constructorElement = new XElement("constructor");
 
             constructorElement.Add(DeclarationConvert(codeConstructor.Declaration, "name"));
-            constructorElement.Add(ModifiersConvert(codeElement));
-            constructorElement.Add(MathodParamsConvert(codeConstructor.Parameters));
+
+            XElement modifiers = ModifiersConvert(codeElement);
+            if (modifiers != null)
+                constructorElement.Add(modifiers);
+
+            XElement parameters = MathodParamsConvert(codeConstructor.Parameters);
+            if (parameters != null)
+                constructorElement.Add(parameters);
 
             return constructorElement;
         }
@@ -249,8 +270,14 @@ namespace Documentation.FormatBuilders
 
             methodElement.Add(DeclarationConvert(codeMethod.Declaration, "name"));
             methodElement.Add(DeclarationConvert(codeMethod.ReturnType, "returnType"));
-            methodElement.Add(ModifiersConvert(codeMethod));
-            methodElement.Add(MathodParamsConvert(codeMethod.Parameters));
+
+            XElement modifiers = ModifiersConvert(codeElement);
+            if (modifiers != null)
+                methodElement.Add(modifiers);
+
+            XElement parameters = MathodParamsConvert(codeMethod.Parameters);
+            if (parameters != null)
+                methodElement.Add(parameters);
 
             return methodElement;
         }
@@ -262,8 +289,15 @@ namespace Documentation.FormatBuilders
 
             operatorElement.Add(DeclarationConvert(codeOperator.Declaration, "name"));
             operatorElement.Add(DeclarationConvert(codeOperator.ReturnType, "returnType"));
-            operatorElement.Add(ModifiersConvert(codeOperator));
-            operatorElement.Add(MathodParamsConvert(codeOperator.Parameters));
+
+
+            XElement modifiers = ModifiersConvert(codeElement);
+            if (modifiers != null)
+                operatorElement.Add(modifiers);
+
+            XElement parameters = MathodParamsConvert(codeOperator.Parameters);
+            if (parameters != null)
+                operatorElement.Add(parameters);
 
             return operatorElement;
         }
@@ -275,8 +309,14 @@ namespace Documentation.FormatBuilders
 
             delegateElement.Add(DeclarationConvert(codeDelegate.Declaration, "name"));
             delegateElement.Add(DeclarationConvert(codeDelegate.ReturnType, "returnType"));
-            delegateElement.Add(ModifiersConvert(codeDelegate));
-            delegateElement.Add(MathodParamsConvert(codeDelegate.Parameters));
+
+            XElement modifiers = ModifiersConvert(codeElement);
+            if (modifiers != null)
+                delegateElement.Add(modifiers);
+
+            XElement parameters = MathodParamsConvert(codeDelegate.Parameters);
+            if (parameters != null)
+                delegateElement.Add(parameters);
 
             return delegateElement;
         }
@@ -289,9 +329,15 @@ namespace Documentation.FormatBuilders
             enumElement.Add(new XAttribute("nrOfElements", codeEnum.Elements.Count));
             enumElement.Add(DeclarationConvert(codeEnum.Declaration, "name"));
 
+            XElement modifiers = ModifiersConvert(codeElement);
+            if (modifiers != null)
+                enumElement.Add(modifiers);
+
+            XElement items = new XElement("items");
             foreach (var item in codeEnum.Elements)
-                enumElement.Add(new XElement("item", item));
-            
+                items.Add(new XElement("item", item));
+
+            enumElement.Add(items);
             return enumElement;
         }
 
@@ -301,14 +347,21 @@ namespace Documentation.FormatBuilders
             XElement typeElement = new XElement(codeElement.Type.ToString().ToLower());
 
             typeElement.Add(DeclarationConvert(codeType.Declaration, "name"));
-            typeElement.Add(ModifiersConvert(codeElement));
 
-            XElement members = new XElement("members");
+            XElement modifiers = ModifiersConvert(codeElement);
+            if (modifiers != null)
+                typeElement.Add(modifiers);
 
-            foreach(var member in codeType.Members)
-                members.Add(ConvertToXml(member));
+            if(codeType.Members.Count > 0)
+            {
+                XElement members = new XElement("members");
 
-            typeElement.Add(members);
+                foreach (var member in codeType.Members)
+                    members.Add(ConvertToXml(member));
+
+                typeElement.Add(members);
+            }
+            
             return typeElement;
         }
 
