@@ -49,7 +49,7 @@ namespace Documentation.FormatBuilders
                 Directory.CreateDirectory(_outputFolder);
         }
 
-        public override void Generate()
+        public override async Task Generate()
         {
             XElement root = new XElement("documentation");
             XNamespace xsi = "http://www.w3.org/2001/XMLSchema-instance";

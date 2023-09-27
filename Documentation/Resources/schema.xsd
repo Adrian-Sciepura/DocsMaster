@@ -25,6 +25,8 @@
 			<xs:enumeration value="partial"/>
 			<xs:enumeration value="abstract"/>
 			<xs:enumeration value="const"/>
+			<xs:enumeration value="sealed"/>
+			<xs:enumeration value="new"/>
 		</xs:restriction>
 	</xs:simpleType>
 	

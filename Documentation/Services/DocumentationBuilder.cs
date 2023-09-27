@@ -37,7 +37,7 @@ namespace Documentation.Services
             }
 
             foreach (var builder in builders)
-                builder.Generate();
+                await builder.Generate();
         }
 
         public async Task BuildAsyncDebug()
@@ -71,7 +71,7 @@ namespace Documentation.Services
             foreach (var builder in builders)
             {
                 watch.Restart();
-                builder.Generate();
+                await builder.Generate();
                 watch.Stop();
                 extensionsBuildTime.Add($"{builder.GetType().Name}: {watch.Elapsed.TotalMilliseconds}");
             }

@@ -66,7 +66,7 @@ namespace Documentation.FormatBuilders
                 Directory.CreateDirectory(_outputFolder);
         }
 
-        public override void Generate()
+        public override async Task Generate()
         {
             StringBuilder sb = new StringBuilder();
 
@@ -77,7 +77,7 @@ namespace Documentation.FormatBuilders
             };
 
             Action<CodeNamespace> runForEveryNamespace = namespacereference => sb.Append(ConvertToMarkdown(converterStaticParams, namespacereference, namespacereference, ""));
-            Func<CodeNamespace, string> pathBuilder = namespaceReference => converterStaticParams.TypeSetup[CodeElementType.Namespace] ? $"{namespaceReference.Declaration.GetName()}.md#{namespaceReference.Declaration.GetHash()}" : $"#{namespaceReference.Declaration.GetHash()}";
+            Func<CodeNamespace, string> pathBuilder = namespaceReference => converterStaticParams.TypeSetup[CodeElementType.Namespace] ? $"{namespaceReference.Declaration.GetName()}{namespaceReference.Declaration.GetHash()}.md#{namespaceReference.Declaration.GetHash()}" : $"#{namespaceReference.Declaration.GetHash()}";
 
             string menu = $"{CSS_STYLE_DECLARATION}\n\n";
             GetNamespacesTreeRecursive(_solutionTree.root, ref menu, "", "", true, runForEveryNamespace, pathBuilder);
@@ -88,7 +88,7 @@ namespace Documentation.FormatBuilders
                 allInOneFile.Write(sb.ToString());
             }
 
-            Task.WaitAll(converterStaticParams.Tasks.ToArray());
+            await Task.WhenAll(converterStaticParams.Tasks.ToArray());
             CopyDocumentStyles();
         }
 
@@ -453,7 +453,7 @@ namespace Documentation.FormatBuilders
 
 
             if (elements.Count > 0)
-                return $"{string.Join(".", elements.ToArray())}.md";
+                return $"{string.Join(".", elements.ToArray())}{codeElement.Declaration.GetHash()}.md";
 
 
             return string.Empty;
@@ -602,7 +602,7 @@ namespace Documentation.FormatBuilders
 
             sb.Append($"### [&#x21E6; Go Back]({path})\n");
             sb.Append(codeElementContent);
-            
+
             using (StreamWriter elementFile = new StreamWriter(fileOutputPath))
                 await elementFile.WriteAsync(sb.ToString());
         }
@@ -616,7 +616,8 @@ namespace Documentation.FormatBuilders
 
             if (constParams.TypeSetup[codeElement.Type])
             {
-                constParams.Tasks.Add(Task.Factory.StartNew(async () => await WriteElementToFileAsync(constParams, fullContent, currentParent, codeElement)));
+                constParams.Tasks.Add(Task.Run(async () => await WriteElementToFileAsync(constParams, fullContent, currentParent, codeElement)));
+                //WriteElementToFileAsync(constParams, fullContent, currentParent, codeElement);
                 return convertedElement.DisplayHeader ?? convertedElement.Header;
             }
 

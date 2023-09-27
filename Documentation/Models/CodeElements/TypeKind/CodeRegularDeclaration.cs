@@ -11,7 +11,7 @@
         {
             Name = name;
             FullName = fullName;
-            FullNameHash = FullName != null ? $"{FullName.GetHashCode():X8}" : null;
+            FullNameHash = FullName != null ? $"{FullName.GetHashCode():X8}" : $"{Name.GetHashCode():X8}";
         }
 
         public override string GetName()

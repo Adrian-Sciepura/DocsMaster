@@ -13,6 +13,6 @@ namespace Documentation.FormatBuilders
             _solutionTree = solutionTree;
         }
 
-        public abstract void Generate();
+        public abstract Task Generate();
     }
 }
