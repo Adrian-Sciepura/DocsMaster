@@ -21,7 +21,7 @@
         <Icon guid="ImageCatalogGuid" id="StatusInformation" />
         <CommandFlag>IconIsMoniker</CommandFlag>
         <Strings>
-          <ButtonText>My Command</ButtonText>
+          <ButtonText>Generate Documentation</ButtonText>
           <LocCanonicalName>.Documentation.MyCommand</LocCanonicalName>
         </Strings>
       </Button>
