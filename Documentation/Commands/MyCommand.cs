@@ -1,9 +1,8 @@
-﻿using Documentation.Models;
-using Documentation.Services;
-using EnvDTE;
+﻿using EnvDTE;
 using System.IO;
+using System.Linq;
 
-namespace Documentation
+namespace Documentation.VSIX
 {
     [Command(PackageIds.MyCommand)]
     internal sealed class MyCommand : BaseCommand<MyCommand>
@@ -12,13 +11,10 @@ namespace Documentation
         {
             var projects = await VS.Solutions.GetAllProjectsAsync();
 
-            DocsInfo docsInfo = new DocsInfo(
-                projects,
-                Path.Combine(Path.GetDirectoryName((await VS.Solutions.GetCurrentSolutionAsync()).FullPath),
-                "docs"));
+            Configuration.DocsInfo docsInfo = new Configuration.DocsInfo(
+                Path.GetDirectoryName((await VS.Solutions.GetCurrentSolutionAsync()).FullPath), projects.ToList());
 
-            DocumentationBuilder docsBuilder = new DocumentationBuilder(docsInfo);
-
+            var docsBuilder = new Engine.DocumentationBuilder(docsInfo.Map());
 
 #if DEBUG
             await docsBuilder.BuildAsyncDebug();

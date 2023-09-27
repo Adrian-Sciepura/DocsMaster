@@ -1,4 +1,4 @@
-﻿using Documentation;
+﻿using Documentation.VSIX;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
