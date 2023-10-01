@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Documentation.VSIX.Configuration
+namespace DocsMaster.VSIX.Configuration
 {
     internal class ConfigFile
     {

@@ -1,14 +1,14 @@
-﻿using Documentation.Engine.Models.CodeElements.TypeKind;
-using Documentation.Engine.ProjectTree;
+﻿using DocsMaster.Engine.Models.CodeElements.TypeKind;
+using DocsMaster.Engine.ProjectTree;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
-using static Documentation.Engine.Models.CodeDocs.CodeDocumentationElement;
+using static DocsMaster.Engine.Models.CodeDocs.CodeDocumentationElement;
 
-namespace Documentation.Engine.Models.CodeDocs
+namespace DocsMaster.Engine.Models.CodeDocs
 {
     internal class CodeDocumentationBuilder
     {

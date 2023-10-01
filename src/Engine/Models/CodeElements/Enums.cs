@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Documentation.Engine.Models.CodeElements
+namespace DocsMaster.Engine.Models.CodeElements
 {
     internal static class ConvertCodeElementType
     {

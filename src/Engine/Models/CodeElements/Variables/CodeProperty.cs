@@ -1,8 +1,8 @@
-﻿using Documentation.Engine.Models.CodeDocs;
-using Documentation.Engine.Models.CodeElements.TypeKind;
+﻿using DocsMaster.Engine.Models.CodeDocs;
+using DocsMaster.Engine.Models.CodeElements.TypeKind;
 using System.Collections.Generic;
 
-namespace Documentation.Engine.Models.CodeElements.Variables
+namespace DocsMaster.Engine.Models.CodeElements.Variables
 {
     internal class CodeProperty : CodeField
     {

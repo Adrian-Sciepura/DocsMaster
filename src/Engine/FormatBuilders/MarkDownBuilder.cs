@@ -1,12 +1,12 @@
-﻿using Documentation.Engine.Common;
-using Documentation.Engine.Configuration;
-using Documentation.Engine.Models.CodeDocs;
-using Documentation.Engine.Models.CodeElements;
-using Documentation.Engine.Models.CodeElements.Methods;
-using Documentation.Engine.Models.CodeElements.TypeKind;
-using Documentation.Engine.Models.CodeElements.Types;
-using Documentation.Engine.Models.CodeElements.Variables;
-using Documentation.Engine.ProjectTree;
+﻿using DocsMaster.Engine.Common;
+using DocsMaster.Engine.Configuration;
+using DocsMaster.Engine.Models.CodeDocs;
+using DocsMaster.Engine.Models.CodeElements;
+using DocsMaster.Engine.Models.CodeElements.Methods;
+using DocsMaster.Engine.Models.CodeElements.TypeKind;
+using DocsMaster.Engine.Models.CodeElements.Types;
+using DocsMaster.Engine.Models.CodeElements.Variables;
+using DocsMaster.Engine.ProjectTree;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -15,10 +15,10 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using static Documentation.Engine.Models.CodeDocs.CodeDocumentationElement;
-using TypeSetup = System.Collections.Generic.Dictionary<Documentation.Engine.Models.CodeElements.CodeElementType, bool>;
+using static DocsMaster.Engine.Models.CodeDocs.CodeDocumentationElement;
+using TypeSetup = System.Collections.Generic.Dictionary<DocsMaster.Engine.Models.CodeElements.CodeElementType, bool>;
 
-namespace Documentation.Engine.FormatBuilders
+namespace DocsMaster.Engine.FormatBuilders
 {
     internal sealed class MarkDownBuilder : FormatBuilder
     {
@@ -464,13 +464,13 @@ namespace Documentation.Engine.FormatBuilders
                 string path;
 
                 if (!constParams.Paths.TryGetValue(codeElement, out path))
-                { 
-                    path = BuildPath(constParams, codeElement, currentParent); 
+                {
+                    path = BuildPath(constParams, codeElement, currentParent);
                     constParams.Paths.TryAdd(codeElement, path);
                 }
 
                 sb.Append(path);
-            }                
+            }
 
 
             if (includeHash)

@@ -1,12 +1,12 @@
-﻿using Documentation.Engine.Configuration;
-using Documentation.Engine.FormatBuilders;
-using Documentation.Engine.ProjectTree;
+﻿using DocsMaster.Engine.Configuration;
+using DocsMaster.Engine.FormatBuilders;
+using DocsMaster.Engine.ProjectTree;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using static Documentation.Engine.Configuration.DocsInfo;
+using static DocsMaster.Engine.Configuration.DocsInfo;
 
-namespace Documentation.Engine
+namespace DocsMaster.Engine
 {
     public class DocumentationBuilder
     {

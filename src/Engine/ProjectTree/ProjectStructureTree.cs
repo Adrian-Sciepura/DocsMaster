@@ -1,4 +1,4 @@
-﻿namespace Documentation.Engine.ProjectTree
+﻿namespace DocsMaster.Engine.ProjectTree
 {
     internal class ProjectStructureTree
     {

@@ -1,10 +1,10 @@
-﻿using Documentation.Engine.Configuration;
-using Documentation.Engine.ProjectTree;
+﻿using DocsMaster.Engine.Configuration;
+using DocsMaster.Engine.ProjectTree;
 using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 
-namespace Documentation.Engine.FormatBuilders
+namespace DocsMaster.Engine.FormatBuilders
 {
     internal abstract class FormatBuilder
     {
@@ -13,9 +13,9 @@ namespace Documentation.Engine.FormatBuilders
 
         protected void CopyFileFromResources(string resourceName, string outputPath)
         {
-            using (Stream style = Assembly.GetExecutingAssembly().GetManifestResourceStream($"Documentation.Engine.Resources.{resourceName}"))
-                using (Stream output = File.OpenWrite(outputPath))
-                    style.CopyTo(output);
+            using (Stream style = Assembly.GetExecutingAssembly().GetManifestResourceStream($"DocsMaster.Engine.Resources.{resourceName}"))
+            using (Stream output = File.OpenWrite(outputPath))
+                style.CopyTo(output);
         }
 
         public FormatBuilder(DocsInfo docsInfo, ProjectStructureTree solutionTree)

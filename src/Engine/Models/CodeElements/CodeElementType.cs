@@ -1,4 +1,4 @@
-﻿namespace Documentation.Engine.Models.CodeElements
+﻿namespace DocsMaster.Engine.Models.CodeElements
 {
     public enum CodeElementType
     {

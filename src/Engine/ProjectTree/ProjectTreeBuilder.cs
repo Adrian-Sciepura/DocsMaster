@@ -1,10 +1,10 @@
-﻿using Documentation.Engine.Configuration;
-using Documentation.Engine.Models.CodeDocs;
-using Documentation.Engine.Models.CodeElements;
-using Documentation.Engine.Models.CodeElements.Methods;
-using Documentation.Engine.Models.CodeElements.TypeKind;
-using Documentation.Engine.Models.CodeElements.Types;
-using Documentation.Engine.Models.CodeElements.Variables;
+﻿using DocsMaster.Engine.Configuration;
+using DocsMaster.Engine.Models.CodeDocs;
+using DocsMaster.Engine.Models.CodeElements;
+using DocsMaster.Engine.Models.CodeElements.Methods;
+using DocsMaster.Engine.Models.CodeElements.TypeKind;
+using DocsMaster.Engine.Models.CodeElements.Types;
+using DocsMaster.Engine.Models.CodeElements.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -12,7 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Documentation.Engine.ProjectTree
+namespace DocsMaster.Engine.ProjectTree
 {
     internal static class ProjectTreeBuilder
     {

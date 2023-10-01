@@ -1,11 +1,11 @@
-﻿using Documentation.VSIX.Common;
+﻿using DocsMaster.VSIX.Common;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using EngineProject = Documentation.Engine.Models.Other.Project;
+using EngineProject = DocsMaster.Engine.Models.Other.Project;
 
-namespace Documentation.VSIX.Configuration
+namespace DocsMaster.VSIX.Configuration
 {
     internal class DocsInfo
     {

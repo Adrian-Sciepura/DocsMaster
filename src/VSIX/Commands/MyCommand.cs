@@ -2,7 +2,7 @@
 using System.IO;
 using System.Linq;
 
-namespace Documentation.VSIX
+namespace DocsMaster.VSIX
 {
     [Command(PackageIds.MyCommand)]
     internal sealed class MyCommand : BaseCommand<MyCommand>

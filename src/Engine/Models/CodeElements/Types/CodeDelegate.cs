@@ -1,9 +1,9 @@
-﻿using Documentation.Engine.Models.CodeDocs;
-using Documentation.Engine.Models.CodeElements.TypeKind;
-using Documentation.Engine.Models.CodeElements.Variables;
+﻿using DocsMaster.Engine.Models.CodeDocs;
+using DocsMaster.Engine.Models.CodeElements.TypeKind;
+using DocsMaster.Engine.Models.CodeElements.Variables;
 using System.Collections.Generic;
 
-namespace Documentation.Engine.Models.CodeElements.Types
+namespace DocsMaster.Engine.Models.CodeElements.Types
 {
     internal class CodeDelegate : BaseCodeType
     {

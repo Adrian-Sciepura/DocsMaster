@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Documentation.Engine.Common
+namespace DocsMaster.Engine.Common
 {
     internal static class DictionaryExtensions
     {

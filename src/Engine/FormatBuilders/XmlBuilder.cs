@@ -1,10 +1,10 @@
-﻿using Documentation.Engine.Configuration;
-using Documentation.Engine.Models.CodeElements;
-using Documentation.Engine.Models.CodeElements.Methods;
-using Documentation.Engine.Models.CodeElements.TypeKind;
-using Documentation.Engine.Models.CodeElements.Types;
-using Documentation.Engine.Models.CodeElements.Variables;
-using Documentation.Engine.ProjectTree;
+﻿using DocsMaster.Engine.Configuration;
+using DocsMaster.Engine.Models.CodeElements;
+using DocsMaster.Engine.Models.CodeElements.Methods;
+using DocsMaster.Engine.Models.CodeElements.TypeKind;
+using DocsMaster.Engine.Models.CodeElements.Types;
+using DocsMaster.Engine.Models.CodeElements.Variables;
+using DocsMaster.Engine.ProjectTree;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,7 +13,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
-namespace Documentation.Engine.FormatBuilders
+namespace DocsMaster.Engine.FormatBuilders
 {
     internal class XmlBuilder : FormatBuilder
     {

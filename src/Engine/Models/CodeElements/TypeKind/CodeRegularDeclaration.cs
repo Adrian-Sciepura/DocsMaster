@@ -1,4 +1,4 @@
-﻿namespace Documentation.Engine.Models.CodeElements.TypeKind
+﻿namespace DocsMaster.Engine.Models.CodeElements.TypeKind
 {
     internal class CodeRegularDeclaration : BaseCodeDeclarationKind
     {

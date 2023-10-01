@@ -1,8 +1,8 @@
-﻿using Documentation.Engine.Models.CodeElements.TypeKind;
+﻿using DocsMaster.Engine.Models.CodeElements.TypeKind;
 using System;
 using System.Collections.Generic;
 
-namespace Documentation.Engine.Models.CodeDocs
+namespace DocsMaster.Engine.Models.CodeDocs
 {
     internal class CodeDocumentationElement : IComparable<CodeDocumentationElement>
     {

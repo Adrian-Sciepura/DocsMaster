@@ -1,10 +1,10 @@
 ﻿
 
-using Documentation.Engine.Models.CodeDocs;
-using Documentation.Engine.Models.CodeElements.TypeKind;
+using DocsMaster.Engine.Models.CodeDocs;
+using DocsMaster.Engine.Models.CodeElements.TypeKind;
 using System;
 
-namespace Documentation.Engine.Models.CodeElements
+namespace DocsMaster.Engine.Models.CodeElements
 {
     internal abstract class CodeElement : IComparable<CodeElement>
     {

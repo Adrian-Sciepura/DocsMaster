@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using System.Collections.Generic;
 using System.IO;
 
-namespace Documentation.Engine.Models.Other
+namespace DocsMaster.Engine.Models.Other
 {
     public class Project
     {

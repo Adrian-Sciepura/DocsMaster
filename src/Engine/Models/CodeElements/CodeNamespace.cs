@@ -1,9 +1,9 @@
-﻿using Documentation.Engine.Models.CodeElements.TypeKind;
-using Documentation.Engine.Models.CodeElements.Types;
+﻿using DocsMaster.Engine.Models.CodeElements.TypeKind;
+using DocsMaster.Engine.Models.CodeElements.Types;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Documentation.Engine.Models.CodeElements
+namespace DocsMaster.Engine.Models.CodeElements
 {
     internal sealed class CodeNamespace : CodeElement, IParentType
     {

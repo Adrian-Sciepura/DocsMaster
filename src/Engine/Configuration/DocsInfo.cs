@@ -1,8 +1,8 @@
-﻿using Documentation.Engine.Models.CodeElements;
-using Documentation.Engine.Models.Other;
+﻿using DocsMaster.Engine.Models.CodeElements;
+using DocsMaster.Engine.Models.Other;
 using System.Collections.Generic;
 
-namespace Documentation.Engine.Configuration
+namespace DocsMaster.Engine.Configuration
 {
     public class DocsInfo
     {

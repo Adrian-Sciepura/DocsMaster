@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Documentation.Engine.Models.CodeDocs
+namespace DocsMaster.Engine.Models.CodeDocs
 {
     internal class CodeDocumentation
     {

@@ -1,7 +1,7 @@
-﻿using Documentation.Engine.Models.CodeElements;
+﻿using DocsMaster.Engine.Models.CodeElements;
 using System.Collections.Generic;
 
-namespace Documentation.Engine.ProjectTree
+namespace DocsMaster.Engine.ProjectTree
 {
     internal class ProjectStructureTreeNode
     {

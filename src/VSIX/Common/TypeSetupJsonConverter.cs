@@ -1,9 +1,9 @@
-﻿using Documentation.VSIX.Configuration;
+﻿using DocsMaster.VSIX.Configuration;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Documentation.VSIX.Common
+namespace DocsMaster.VSIX.Common
 {
     internal class TypeSetupJsonConverter : JsonConverter<Dictionary<CodeElementType, bool>>
     {

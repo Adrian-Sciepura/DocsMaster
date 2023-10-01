@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace Documentation.Engine.Common
+namespace DocsMaster.Engine.Common
 {
     internal static class StringBuilderExtensions
     {

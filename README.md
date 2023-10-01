@@ -1,4 +1,4 @@
-<h1 style="text-align: center;">📝 DocsBuilder 📝</h1>
+<h1 align="center" style="text-align: center;">📝 DocsMaster 📝</h1>
 
 <h2>General Info</h2>
 

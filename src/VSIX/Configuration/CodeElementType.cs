@@ -1,4 +1,4 @@
-﻿namespace Documentation.VSIX.Configuration
+﻿namespace DocsMaster.VSIX.Configuration
 {
     public enum CodeElementType
     {

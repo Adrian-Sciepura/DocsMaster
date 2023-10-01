@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Documentation.Engine.Models.CodeElements.TypeKind
+namespace DocsMaster.Engine.Models.CodeElements.TypeKind
 {
     internal class CodeGenericDeclaration : BaseCodeDeclarationKind
     {
